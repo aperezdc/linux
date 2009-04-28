@@ -358,6 +358,15 @@ int mmc_sd_switch_hs(struct mmc_card *card)
 		return -ENOMEM;
 	}
 
+	/*
+	 * Some SDHC cards, notably those with a Sandisk SD controller
+	 * (also found in Kingston products) need a bit of slack
+	 * before successfully handling the SWITCH command.  So far,
+	 * cards identifying themselves as "SD04G" and "SD08G" are
+	 * affected
+	 */
+	udelay(100);
+
 	err = mmc_sd_switch(card, 1, 0, 1, status);
 	if (err)
 		goto out;
