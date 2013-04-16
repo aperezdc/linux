@@ -52,11 +52,11 @@ u32 _r8712_init_sta_priv(struct	sta_priv *pstapriv)
 	s32 i;
 
 	pstapriv->pallocated_stainfo_buf = _malloc(sizeof(struct sta_info) *
-						   NUM_STA + 4);
+						   NUM_STA + 8);
 	if (pstapriv->pallocated_stainfo_buf == NULL)
 		return _FAIL;
-	pstapriv->pstainfo_buf = pstapriv->pallocated_stainfo_buf + 4 -
-		((addr_t)(pstapriv->pallocated_stainfo_buf) & 3);
+	pstapriv->pstainfo_buf = pstapriv->pallocated_stainfo_buf + 8 -
+		((addr_t)(pstapriv->pallocated_stainfo_buf) & 7);
 	_init_queue(&pstapriv->free_sta_queue);
 	spin_lock_init(&pstapriv->sta_hash_lock);
 	pstapriv->asoc_sta_count = 0;
