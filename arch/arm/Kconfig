@@ -1808,7 +1808,7 @@ config FORCE_MAX_ZONEORDER
 	  a value of 11 means that the largest free memory block is 2^10 pages.
 
 config ALIGNMENT_TRAP
-	bool
+	bool "Software alignment trap"
 	depends on CPU_CP15_MMU
 	default y if !ARCH_EBSA110
 	select HAVE_PROC_CPU if PROC_FS
