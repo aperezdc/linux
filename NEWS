@@ -1,0 +1,61 @@
+2013-07-30  3.12.0-rc2-00109-g3760983
+
+ * Changed the kernel preemption mode to "No Forced Preemption (Server)",
+   which makes more sense for a headless device like the Dreamplug.
+
+ * Kernel image is now compressed with XZ, to have a smaller uImage
+   and shorter boot times.
+
+ * Enabled the CPU idle support, which is now available for the Marvell
+   Kirkwood architecture.
+
+ * Enabled basic MTD device support and the m25p80 to access the U-Boot
+   environment variables, which are stored in a SPI NOR flash memory
+   using a M25P-compatible controller. Proper address, environment size
+   and flash block size have to be determined, to be able to read/write
+   the environment using fw_printenv/fw_setenv.
+
+ * Enabled power saving by default for wireless devices using the cfg80211
+   layer. This enables hostapd to let clients to do power-saving naps in
+   between DTIM intervals and save battery (note: not useful with the
+   built-in SD8688 chip in AP mode).
+
+ * Disabled the FPU emulation code. The ARMv5TE included in the Dreamplug
+   contains a hardware floating-point unit, so this is not needed.
+
+ * Disabled drivers for Bluetooth controllers other than the integrated
+   Marvell SDIO controller. It is very unlikely than a device other than
+   the integrated in the Dreamplug would ever be plugged to it.
+
+ * Disabled support for SCSI CDROM drives, which did not make much sense
+   to keep around.
+
+ * Disabled the software watchdog driver, in favour of the hardware
+   watchdog present in the Dreamplug.
+
+
+2013-05-13  3.10.0-rc1-00009-g18d84db
+
+ * The "libertas_sdio" wifi driver will work fine. Tested in *client* mode.
+
+ * A version of the "uap8xxx" wifi driver, forward-ported from the Marvell
+   patch set available at several places, supporting AP mode is included,
+   but the firmware and the "uaputl" tool are not included in the tarballs.
+   You can use a copy of those from your current installation. Note that
+   this is *untested* for the moment.
+
+ * The "mwifiex" wifi driver needed for later revisions of the Dreamplug
+   is included. Note that I do not own a plug with the new wireless chip,
+   so this is *untested by me*.
+
+ * Last, but not least, I have been able to adapt the "libertas_tf_sdio"
+   wifi driver from the OLPC XO-1.5 kernel sources, which theoretically
+   supports all of client, mesh and AP modes, but it was designed for the
+   SD8686 chip. The Dreamplug has a SD8688, which is very similar, but I
+   haven't been able of getting it to load the firmware. I don't have
+   specific firmware for the SD8688 chip, so I tried with the SD8686 one,
+   which makes the kernel panic when removing the driver. This could work
+   if you are able to find a Dreamplug with a SD8686. Beware, YMMV.
+
+-Adrian
+
