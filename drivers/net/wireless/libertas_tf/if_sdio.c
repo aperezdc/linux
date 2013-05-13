@@ -63,9 +63,17 @@ static struct if_sdio_model if_sdio_models[] = {
 		.helper = "sd8686_helper.bin",
 		.firmware = "sd8686tf.bin",
 	},
+	{
+		/* 8688 */
+		.model = IF_SDIO_MODEL_8688,
+		.helper = "sd8688_helper.bin",
+		.firmware = "sd8688tf.bin",
+	},
 };
 MODULE_FIRMWARE("sd8686_helper.bin");
 MODULE_FIRMWARE("sd8686tf.bin");
+MODULE_FIRMWARE("sd8688_helper.bin");
+MODULE_FIRMWARE("sd8688tf.bin");
 
 struct if_sdio_packet {
 	struct if_sdio_packet	*next;
