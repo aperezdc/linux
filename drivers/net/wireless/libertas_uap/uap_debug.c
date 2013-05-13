@@ -84,6 +84,8 @@ static int num_of_items = sizeof(items) / sizeof(items[0]);
 /********************************************************
   Local Functions
  ********************************************************/
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0)
 /**
  *  @brief proc read function
  *
@@ -209,6 +211,109 @@ uap_debug_write(struct file *f, const char *buf, unsigned long cnt, void *data)
 	return cnt;
 }
 
+#else
+
+static int show_debug(struct seq_file *m, void *v)
+{
+	struct debug_data *d = m->private;
+	unsigned i;
+	int val;
+
+	for (i = 0; i < num_of_items; i++) {
+		switch (d[i].size) {
+			case 1: val = *((u8 *) d[i].addr); break;
+			case 2: val = *((u16*) d[i].addr); break;
+			case 4: val = *((u32*) d[i].addr); break;
+		}
+		seq_printf(m, "%s=%d\n", d[i].name, val);
+	}
+
+	return 0;
+}
+
+static ssize_t uap_debug_write(struct file *file, const char __user *buffer,
+			       size_t count, loff_t *pos)
+{
+	struct debug_data *d = PDE_DATA(file_inode(file));
+	char *pdata = (char*) kmalloc(count, GFP_KERNEL);
+	char *p, *p0, *p1, *p2;
+	unsigned i;
+	int r;
+
+	if (!pdata || copy_from_user(pdata, buffer, count)) {
+		if (pdata)
+			kfree(pdata);
+		return 0;
+	}
+
+	p0 = pdata;
+	for (i = 0; i < num_of_items; i++) {
+		for (;;) {
+			if (!(p = strstr(p0, d[i].name)))
+				break;
+			if (!(p1 = strchr(p, '\n')))
+				break;
+			p0 = p1++;
+			if (!(p2 = strchr(p, '=')))
+				break;
+			p2++;
+
+			r = string_to_number(p2);
+
+			switch (d[i].size) {
+				case 1: *((u8 *) d[i].addr) = (u8 ) r; break;
+				case 2: *((u16*) d[i].addr) = (u16) r; break;
+				case 4: *((u32*) d[i].addr) = (u32) r; break;
+			}
+			break;
+		}
+	}
+
+	kfree(pdata);
+
+#ifdef DEBUG_LEVEL1
+	printk(KERN_ALERT "drvdbg = 0x%x\n", drvdbg);
+	printk(KERN_ALERT "INFO  (%08lx) %s\n", DBG_INFO,
+	       (drvdbg & DBG_INFO) ? "X" : "");
+	printk(KERN_ALERT "WARN  (%08lx) %s\n", DBG_WARN,
+	       (drvdbg & DBG_WARN) ? "X" : "");
+	printk(KERN_ALERT "ENTRY (%08lx) %s\n", DBG_ENTRY,
+	       (drvdbg & DBG_ENTRY) ? "X" : "");
+	printk(KERN_ALERT "CMD_D (%08lx) %s\n", DBG_CMD_D,
+	       (drvdbg & DBG_CMD_D) ? "X" : "");
+	printk(KERN_ALERT "DAT_D (%08lx) %s\n", DBG_DAT_D,
+	       (drvdbg & DBG_DAT_D) ? "X" : "");
+	printk(KERN_ALERT "CMND  (%08lx) %s\n", DBG_CMND,
+	       (drvdbg & DBG_CMND) ? "X" : "");
+	printk(KERN_ALERT "DATA  (%08lx) %s\n", DBG_DATA,
+	       (drvdbg & DBG_DATA) ? "X" : "");
+	printk(KERN_ALERT "ERROR (%08lx) %s\n", DBG_ERROR,
+	       (drvdbg & DBG_ERROR) ? "X" : "");
+	printk(KERN_ALERT "FATAL (%08lx) %s\n", DBG_FATAL,
+	       (drvdbg & DBG_FATAL) ? "X" : "");
+	printk(KERN_ALERT "MSG   (%08lx) %s\n", DBG_MSG,
+	       (drvdbg & DBG_MSG) ? "X" : "");
+#endif
+
+	return count;
+}
+
+static int uap_debug_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, show_debug, PDE_DATA(inode));
+}
+
+static const struct file_operations debug_fops = {
+	.open = uap_debug_open,
+	.read = seq_read,
+	.write = uap_debug_write,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
+#endif
+
+
 /********************************************************
   Global Functions
  ********************************************************/
@@ -234,6 +339,7 @@ uap_debug_entry(uap_private * priv, struct net_device *dev)
 		if (items[i].flag & OFFSET_UAP_DEV)
 			items[i].addr = items[i].offset + (u32) & priv->uap_dev;
 	}
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0)
 	r = create_proc_entry("debug", 0644, priv->proc_entry);
 	if (r == NULL)
 		return;
@@ -243,6 +349,10 @@ uap_debug_entry(uap_private * priv, struct net_device *dev)
 	r->write_proc = uap_debug_write;
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30)
 	r->owner = THIS_MODULE;
+#endif
+#else
+	if (!proc_create_data("debug", 0640, priv->proc_entry, &debug_fops, items))
+		return;
 #endif
 }
 
