@@ -437,9 +437,13 @@ uap_init_sw(uap_private *priv)
 					       NL_MULTICAST_GROUP, NULL, NULL,
 					       THIS_MODULE);
 #else
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0)
 	Adapter->nl_sk = netlink_kernel_create(&init_net, NETLINK_MARVELL,
 					       NL_MULTICAST_GROUP, NULL, NULL,
 					       THIS_MODULE);
+#else
+	Adapter->nl_sk = netlink_kernel_create(&init_net, NETLINK_MARVELL, NULL);
+#endif
 #endif
 #endif
 	if (!Adapter->nl_sk) {
@@ -1433,7 +1437,13 @@ uap_process_event(uap_private *priv, u8 *payload, uint len)
 		memcpy(NLMSG_DATA(nlh), payload, len);
 
 		/* From Kernel */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0)
 		NETLINK_CB(skb).pid = 0;
+#else
+		NETLINK_CREDS(skb)->pid = 0;
+		NETLINK_CREDS(skb)->uid = 0;
+		NETLINK_CREDS(skb)->gid = 0;
+#endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20)
 		/* Multicast message */

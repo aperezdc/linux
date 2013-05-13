@@ -51,6 +51,10 @@
 #include <linux/firmware.h>
 #include <linux/delay.h>
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0)
+#include <net/scm.h>
+#endif
+
 #include "uap_drv.h"
 #include "uap_fw.h"
 

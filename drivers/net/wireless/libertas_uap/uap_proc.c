@@ -19,155 +19,115 @@
   */
 #ifdef CONFIG_PROC_FS
 #include "uap_headers.h"
+#include <linux/fs.h>
 
-/** /proc directory root */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,26)
-#define PROC_DIR NULL
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24)
-#define PROC_DIR &proc_root
-#else
-#define PROC_DIR proc_net
-#endif
 
-/**
- * @brief proc read function
- *
- * @param page		pointer to buffer
- * @param start		read data starting position
- * @param offset	offset
- * @param count		counter
- * @param eof		end of file flag
- * @param data		data to output
- * @return		number of output data
- */
-static int
-uap_proc_read(char *page, char **start, off_t offset,
-	      int count, int *eof, void *data)
+static int uap_hwstatus_write(struct file *file, const char __user *buffer,
+			      size_t count, loff_t *pos)
 {
-	int i;
-	char *p = page;
-	struct net_device *netdev = data;
+	char databuf[11];
+	int length = 0;
+
+	if (count > (sizeof(databuf) - 1))
+		return -1;
+
+	if (copy_from_user(&databuf, buffer, count))
+		return -1;
+
+	databuf[count] = '\0';
+	length = strlen(databuf);
+	if (databuf[length - 1] == '\n')
+		databuf[--length] = '\0';
+
+	if (string_to_number(databuf) == HWReset) {
+		uap_private *priv = (uap_private*) PDE_DATA(file_inode(file));
+		PRINTM(MSG, "reset hw\n");
+		uap_soft_reset(priv);
+		priv->adapter->HardwareStatus = HWReset;
+		return count;
+	}
+
+	return -EINVAL;
+}
+
+static int uap_show_hwstatus(struct seq_file *m, void *v)
+{
+	struct net_device *netdev = m->private;
+	uap_private *priv = (uap_private*) netdev_priv(netdev);
+	seq_printf(m, "%d\n", priv->adapter->HardwareStatus);
+	return 0;
+}
+
+static int uap_show_info(struct seq_file *m, void *v)
+{
+	struct net_device *netdev = m->private;
+	uap_private *priv = (uap_private*) netdev_priv(netdev);
 	struct netdev_hw_addr *ha;
-	char fmt[64];
-	uap_private *priv = (uap_private*) netdev_priv(netdev);
+	uint32_t i;
 
-	if (offset != 0) {
-		*eof = 1;
-		goto exit;
-	}
+	seq_printf(m, "driver_name = \"uap\"\n");
+	seq_printf(m, "driver_version = %s-(FP%s)\n", DRIVER_VERSION, FPNUM);
+	seq_printf(m, "InterfaceName=\"%s\"\n", netdev->name);
+	seq_printf(m, "State=\"%s\"\n", ((priv->MediaConnected == FALSE) ? "Disconnected" : "Connected"));
+	seq_printf(m, "MACAddress=\"%02x:%02x:%02x:%02x:%02x:%02x\"\n",
+		   netdev->dev_addr[0], netdev->dev_addr[1], netdev->dev_addr[2],
+		   netdev->dev_addr[3], netdev->dev_addr[4], netdev->dev_addr[5]);
 
-	strcpy(fmt, DRIVER_VERSION);
-
-	p += sprintf(p, "driver_name = " "\"uap\"\n");
-	p += sprintf(p, "driver_version = %s-(FP%s)", fmt, FPNUM);
-	p += sprintf(p, "\nInterfaceName=\"%s\"\n", netdev->name);
-	p += sprintf(p, "State=\"%s\"\n",
-		     ((priv->MediaConnected ==
-		       FALSE) ? "Disconnected" : "Connected"));
-	p += sprintf(p, "MACAddress=\"%02x:%02x:%02x:%02x:%02x:%02x\"\n",
-		     netdev->dev_addr[0], netdev->dev_addr[1], netdev->dev_addr[2],
-		     netdev->dev_addr[3], netdev->dev_addr[4], netdev->dev_addr[5]);
 	i = 0;
 	netdev_for_each_mc_addr(ha, netdev) {
-		++i;
+		i++;
 	}
-	p += sprintf(p, "MCCount=\"%d\"\n", i);
+	seq_printf(m, "MCCount=\"%d\"\n", i);
 
-	/*
-	 * Put out the multicast list
-	 */
 	i = 0;
 	netdev_for_each_mc_addr(ha, netdev) {
-		p += sprintf(p,
-			     "MCAddr[%d]=\"%02x:%02x:%02x:%02x:%02x:%02x\"\n",
-			     i++,
-			     ha->addr[0], ha->addr[1],
-			     ha->addr[2], ha->addr[3],
-			     ha->addr[4], ha->addr[5]);
+		seq_printf(m, "MCAddr[%d]=\"%02x:%02x:%02x:%02x:%02x:%02x\"\n", i++,
+			   ha->addr[0], ha->addr[1], ha->addr[2],
+			   ha->addr[3], ha->addr[4], ha->addr[5]);
 	}
 
-	p += sprintf(p, "num_tx_bytes = %lu\n", priv->stats.tx_bytes);
-	p += sprintf(p, "num_rx_bytes = %lu\n", priv->stats.rx_bytes);
-	p += sprintf(p, "num_tx_pkts = %lu\n", priv->stats.tx_packets);
-	p += sprintf(p, "num_rx_pkts = %lu\n", priv->stats.rx_packets);
-	p += sprintf(p, "num_tx_pkts_dropped = %lu\n", priv->stats.tx_dropped);
-	p += sprintf(p, "num_rx_pkts_dropped = %lu\n", priv->stats.rx_dropped);
-	p += sprintf(p, "num_tx_pkts_err = %lu\n", priv->stats.tx_errors);
-	p += sprintf(p, "num_rx_pkts_err = %lu\n", priv->stats.rx_errors);
-	p += sprintf(p, "num_tx_timeout = %u\n", priv->num_tx_timeout);
-	p += sprintf(p, "carrier %s\n",
-		     ((netif_carrier_ok(priv->uap_dev.netdev)) ? "on" : "off"));
-	p += sprintf(p, "tx queue %s\n",
-		     ((netif_queue_stopped(priv->uap_dev.netdev)) ? "stopped" :
-		      "started"));
-
-exit:
-	return (p - page);
+	seq_printf(m, "num_tx_bytes = %lu\n", priv->stats.tx_bytes);
+	seq_printf(m, "num_rx_bytes = %lu\n", priv->stats.rx_bytes);
+	seq_printf(m, "num_tx_pkts = %lu\n", priv->stats.tx_packets);
+	seq_printf(m, "num_rx_pkts = %lu\n", priv->stats.rx_packets);
+	seq_printf(m, "num_tx_pkts_dropped = %lu\n", priv->stats.tx_dropped);
+	seq_printf(m, "num_rx_pkts_dropped = %lu\n", priv->stats.rx_dropped);
+	seq_printf(m, "num_tx_pkts_err = %lu\n", priv->stats.tx_errors);
+	seq_printf(m, "num_rx_pkts_err = %lu\n", priv->stats.rx_errors);
+	seq_printf(m, "num_tx_timeout = %u\n", priv->num_tx_timeout);
+	seq_printf(m, "carrier %s\n",
+		   ((netif_carrier_ok(priv->uap_dev.netdev)) ? "on" : "off"));
+	seq_printf(m, "tx queue %s\n",
+		   ((netif_queue_stopped(priv->uap_dev.netdev)) ? "stopped" :
+		    "started"));
+	return 0;
 }
 
-/**
- * @brief hwstatus proc write function
- *
- * @param f	file pointer
- * @param buf	pointer to data buffer
- * @param cnt	data number to write
- * @param data	data to write
- * @return	number of data
- */
-static int
-uap_hwstatus_write(struct file *f, const char *buf, unsigned long cnt,
-		   void *data)
+static int uap_hwstatus_open(struct inode *inode, struct file *file)
 {
-	struct net_device *netdev = data;
-	uap_private *priv = (uap_private*) netdev_priv(netdev);
-	char databuf[10];
-	int hwstatus;
-	MODULE_GET;
-	if (cnt > 10) {
-		MODULE_PUT;
-		return cnt;
-	}
-	if (copy_from_user(databuf, buf, cnt)) {
-		MODULE_PUT;
-		return 0;
-	}
-	hwstatus = string_to_number(databuf);
-	switch (hwstatus) {
-		case HWReset:
-			PRINTM(MSG, "reset hw\n");
-			uap_soft_reset(priv);
-			priv->adapter->HardwareStatus = HWReset;
-			break;
-		default:
-			break;
-	}
-	MODULE_PUT;
-	return cnt;
+	return single_open(file, uap_show_hwstatus, PDE_DATA(inode));
 }
 
-/**
- * @brief hwstatus proc read function
- *
- * @param page	pointer to buffer
- * @param s	read data starting position
- * @param off	offset
- * @param cnt	counter
- * @param eof	end of file flag
- * @param data	data to output
- * @return	number of output data
- */
-static int
-uap_hwstatus_read(char *page, char **s, off_t off, int cnt, int *eof,
-		  void *data)
+static int uap_info_open(struct inode *inode, struct file *file)
 {
-	char *p = page;
-	struct net_device *netdev = data;
-	uap_private *priv = (uap_private*) netdev_priv(netdev);
-	MODULE_GET;
-	p += sprintf(p, "%d\n", priv->adapter->HardwareStatus);
-	MODULE_PUT;
-	return p - page;
+	return single_open(file, uap_show_info, PDE_DATA(inode));
 }
+
+static const struct file_operations info_fops = {
+	.open		= uap_info_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static const struct file_operations hwstatus_fops = {
+	.open		= uap_hwstatus_open,
+	.read		= seq_read,
+	.write		= uap_hwstatus_write,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 
 /**
  * @brief create uap proc file
@@ -182,40 +142,17 @@ uap_proc_entry(uap_private *priv, struct net_device *dev)
 
 	PRINTM(INFO, "Creating Proc Interface\n");
 	/* Check if uap directory already exists */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,26)
-	for (r = r->subdir; r; r = r->next) {
-		if (r->namelen && !strcmp("uap", r->name)) {
-			/* Directory exists */
-			PRINTM(WARN, "proc directory already exists!\n");
-			priv->proc_uap = r;
-			break;
-		}
-	}
-#endif
 	if (!priv->proc_uap) {
-		priv->proc_uap = proc_mkdir("uap", PROC_DIR);
-		if (!priv->proc_uap)
+		if (!(priv->proc_uap = proc_mkdir("uap", r))) {
+			PRINTM(MSG, "Failed to create /proc/<dev>/");
 			return;
-		else
-			atomic_set(&priv->proc_uap->count, 1);
-	} else {
-		atomic_inc(&priv->proc_uap->count);
-	}
-	priv->proc_entry = proc_mkdir(dev->name, priv->proc_uap);
-
-	if (priv->proc_entry) {
-		r = create_proc_read_entry("info", 0, priv->proc_entry, uap_proc_read,
-					   dev);
-		r = create_proc_entry("hwstatus", 0644, priv->proc_entry);
-		if (r) {
-			r->data = dev;
-			r->read_proc = uap_hwstatus_read;
-			r->write_proc = uap_hwstatus_write;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30)
-			r->owner = THIS_MODULE;
-#endif
-		} else
-			PRINTM(MSG, "Fail to create proc hwstatus\n");
+		}
+		if ((priv->proc_entry = proc_mkdir(dev->name, priv->proc_uap))) {
+			if (!proc_create_data("info", 0640, priv->proc_entry, &info_fops, dev))
+				PRINTM(MSG, "Failed to create /proc/<dev>/info");
+			if (!proc_create_data("hwstatus", 0640, priv->proc_entry, &hwstatus_fops, dev))
+				PRINTM(MSG, "Failed to create /proc/<dev>/hwstatus");
+		}
 	}
 }
 
@@ -233,9 +170,7 @@ uap_proc_remove(uap_private *priv)
 			remove_proc_entry("hwstatus", priv->proc_entry);
 		}
 		remove_proc_entry(priv->uap_dev.netdev->name, priv->proc_uap);
-		atomic_dec(&priv->proc_uap->count);
-		if (atomic_read(&(priv->proc_uap->count)) == 0)
-			remove_proc_entry("uap", PROC_DIR);
+		remove_proc_entry("uap", PROC_DIR);
 	}
 }
 
