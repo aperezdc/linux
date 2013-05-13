@@ -25,6 +25,7 @@
 #include <linux/of_irq.h>
 #include <linux/mmc/host.h>
 #include <linux/mmc/slot-gpio.h>
+#include <linux/mmc/sd.h>
 #include <linux/pinctrl/consumer.h>
 
 #include <asm/sizes.h>
@@ -148,6 +149,7 @@ static void mvsd_request(struct mmc_host *mmc, struct mmc_request *mrq)
 
 	dev_dbg(host->dev, "cmd %d (hw state 0x%04x)\n",
 		cmd->opcode, mvsd_read(MVSD_HW_STATE));
+    if (cmd->opcode == SD_SWITCH) mdelay(1); /* Voodoo */
 
 	cmdreg = MVSD_CMD_INDEX(cmd->opcode);
 
