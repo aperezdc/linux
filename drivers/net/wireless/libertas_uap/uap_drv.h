@@ -165,38 +165,6 @@ hexdump(char *prompt, u8 * buf, int len)
 /** Unsigned char */
 typedef u8 BOOLEAN;
 
-/*
- * OS macro definitions
- */
-/** OS macro to get time */
-#define os_time_get()	jiffies
-
-/** OS macro to update transfer start time */
-#define UpdateTransStart(dev) { \
-	dev->trans_start = jiffies; \
-}
-
-/** Try to get a reference to the module */
-#define MODULE_GET	try_module_get(THIS_MODULE)
-/** Decrease module reference count */
-#define MODULE_PUT	module_put(THIS_MODULE)
-
-/** OS macro to initialize semaphore */
-#define OS_INIT_SEMAPHORE(x)	sema_init(x,1)
-/** OS macro to acquire blocking semaphore */
-#define OS_ACQ_SEMAPHORE_BLOCK(x)	down_interruptible(x)
-/** OS macro to acquire non-blocking semaphore */
-#define OS_ACQ_SEMAPHORE_NOBLOCK(x)	down_trylock(x)
-/** OS macro to release semaphore */
-#define OS_REL_SEMAPHORE(x)		up(x)
-
-static inline void
-os_sched_timeout(u32 millisec)
-{
-	set_current_state(TASK_INTERRUPTIBLE);
-	schedule_timeout((millisec * HZ) / 1000);
-}
-
 /** Maximum size of ethernet packet */
 #define MRVDRV_MAXIMUM_ETH_PACKET_SIZE	1514
 
@@ -362,8 +330,6 @@ typedef struct _uap_dbg
 	u32 num_tx_host_to_card_failure;
 } uap_dbg;
 
-/** Set thread state */
-#define OS_SET_THREAD_STATE(x)		set_current_state(x)
 
 typedef struct
 {
