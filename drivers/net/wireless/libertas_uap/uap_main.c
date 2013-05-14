@@ -589,8 +589,12 @@ uap_service_main_thread(void *data)
 	wait_queue_t wait;
 	u8 ireg = 0;
 	struct sk_buff *skb;
+
 	ENTER();
-	uap_activate_thread(thread);
+
+	thread->pid = current->pid;
+	init_waitqueue_head(&thread->waitQ);
+
 	init_waitqueue_entry(&wait, current);
 	current->flags |= PF_NOFREEZE;
 
@@ -690,7 +694,9 @@ uap_service_main_thread(void *data)
 			}
 		}
 	}
-	uap_deactivate_thread(thread);
+
+	thread->pid = 0;
+
 	LEAVE();
 	return UAP_STATUS_SUCCESS;
 }
@@ -1076,7 +1082,16 @@ uap_process_rx_packet(uap_private * priv, struct sk_buff *skb)
 	skb_pull(skb, pRxPD->RxPktOffset);
 	priv->stats.rx_packets++;
 	priv->stats.rx_bytes += skb->len;
-	os_upload_rx_packet(priv, skb);
+
+	skb->dev       = priv->uap_dev.netdev;
+	skb->protocol  = eth_type_trans(skb, priv->uap_dev.netdev);
+	skb->ip_summed = CHECKSUM_UNNECESSARY;
+
+    if (in_interrupt())
+        netif_rx(skb);
+    else
+        netif_rx_ni(skb);
+
 	LEAVE();
 	return ret;
 }
@@ -1507,7 +1522,11 @@ uap_add_card(void *card)
 	PRINTM(INFO, "Starting kthread...\n");
 	priv->MainThread.priv = priv;
 	spin_lock_init(&priv->driver_lock);
-	uap_create_thread(uap_service_main_thread, &priv->MainThread, "uap_main_service");
+
+	priv->MainThread.task = kthread_run(uap_service_main_thread,
+					    &priv->MainThread,
+					    "%s", "uap_main_service");
+
 	while (priv->MainThread.pid == 0) {
 		set_current_state(TASK_INTERRUPTIBLE);
 		schedule_timeout(2);
