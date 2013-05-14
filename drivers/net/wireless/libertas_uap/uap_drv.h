@@ -40,16 +40,6 @@
 #define BIT(x)	(1UL << (x))
 #endif
 
-/** Dma addresses are 32-bits wide.  */
-#ifndef __ATTRIB_ALIGN__
-#define __ATTRIB_ALIGN__ __attribute__((aligned(4)))
-#endif
-
-/**  attribute pack */
-#ifndef __ATTRIB_PACK__
-#define __ATTRIB_PACK__ __attribute__ ((packed))
-#endif
-
 /** Debug Macro definition*/
 #ifdef	DEBUG_LEVEL1
 
@@ -498,7 +488,7 @@ typedef struct _PS_CMD_ConfirmSleep
 	u16 SeqNum;
 	/** Result */
 	u16 Result;
-} __ATTRIB_PACK__ PS_CMD_ConfirmSleep, *PPS_CMD_ConfirmSleep;
+} __attribute__((packed)) PS_CMD_ConfirmSleep, *PPS_CMD_ConfirmSleep;
 
 /** Wlan Adapter data structure*/
 struct _uap_adapter
@@ -524,7 +514,7 @@ struct _uap_adapter
 	/** Command buffer length */
 	u32 CmdSize;
 	/** Command wait queue */
-	wait_queue_head_t cmdwait_q __ATTRIB_ALIGN__;
+	wait_queue_head_t cmdwait_q __attribute__((aligned(4)));
 	/** Command wait queue state flag */
 	u8 CmdWaitQWoken;
 	/** PnP support */
