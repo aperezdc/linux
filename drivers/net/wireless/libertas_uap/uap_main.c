@@ -176,7 +176,7 @@ uap_process_cmd(uap_private * priv, struct sk_buff *skb, u8 wait_option)
 		LEAVE();
 		return ret;
 	}
-	if (OS_ACQ_SEMAPHORE_BLOCK(&Adapter->CmdSem)) {
+	if (down_interruptible(&Adapter->CmdSem)) {
 		PRINTM(ERROR, "Acquire semaphore error, uap_prepare_cmd\n");
 		kfree(skb);
 		LEAVE();
@@ -195,7 +195,7 @@ uap_process_cmd(uap_private * priv, struct sk_buff *skb, u8 wait_option)
 		}
 	} else
 		wait_event_interruptible(Adapter->cmdwait_q, Adapter->CmdWaitQWoken);
-	OS_REL_SEMAPHORE(&Adapter->CmdSem);
+	up(&Adapter->CmdSem);
 	LEAVE();
 	return ret;
 }
@@ -412,7 +412,7 @@ uap_init_sw(uap_private *priv)
 	Adapter->PSConfirmSleep.Result = 0;
 
 	init_waitqueue_head(&Adapter->cmdwait_q);
-	OS_INIT_SEMAPHORE(&Adapter->CmdSem);
+	sema_init(&Adapter->CmdSem, 1);
 
 	skb_queue_head_init(&Adapter->tx_queue);
 	skb_queue_head_init(&Adapter->cmd_queue);
@@ -596,7 +596,7 @@ uap_service_main_thread(void *data)
 
 	for (;;) {
 		add_wait_queue(&thread->waitQ, &wait);
-		OS_SET_THREAD_STATE(TASK_INTERRUPTIBLE);
+		set_current_state(TASK_INTERRUPTIBLE);
 		if ((Adapter->WakeupTries) ||
 		    (!Adapter->IntCounter && Adapter->ps_state == PS_STATE_PRE_SLEEP) ||
 		    (!priv->adapter->IntCounter
@@ -608,7 +608,7 @@ uap_service_main_thread(void *data)
 			PRINTM(INFO, "Main: Thread sleeping...\n");
 			schedule();
 		}
-		OS_SET_THREAD_STATE(TASK_RUNNING);
+		set_current_state(TASK_RUNNING);
 		remove_wait_queue(&thread->waitQ, &wait);
 		if (kthread_should_stop() || Adapter->SurpriseRemoved) {
 			PRINTM(INFO, "main-thread: break from main thread: "
@@ -632,7 +632,7 @@ uap_service_main_thread(void *data)
 			   (!skb_queue_empty(&priv->adapter->cmd_queue) ||
 			    !skb_queue_empty(&priv->adapter->tx_queue))) {
 			priv->adapter->WakeupTries++;
-			PRINTM(CMND, "%lu : Wakeup device...\n", os_time_get());
+			PRINTM(CMND, "%lu : Wakeup device...\n", jiffies);
 			sbi_wakeup_firmware(priv);
 			continue;
 		}
@@ -1037,7 +1037,9 @@ uap_soft_reset(uap_private * priv)
 	}
 	Adapter->SurpriseRemoved = TRUE;
 	/* delay to allow hardware complete reset */
-	os_sched_timeout(5);
+	set_current_state(TASK_INTERRUPTIBLE);
+	schedule_timeout(5);
+
 	if (priv->MediaConnected == TRUE) {
 		os_stop_queue(priv);
 		os_carrier_off(priv);
@@ -1098,7 +1100,8 @@ uap_open(struct net_device *dev)
 	/* Use the following flag check and wait function to work around the issue. */
 	while ((Adapter->HardwareStatus != HWReady) && (i < MAX_WAIT_DEVICE_READY_COUNT)) {
 		i++;
-		os_sched_timeout(100);
+		set_current_state(TASK_INTERRUPTIBLE);
+		schedule_timeout(100);
 	}
 	if (i >= MAX_WAIT_DEVICE_READY_COUNT) {
 		PRINTM(FATAL, "HW not ready, uap_open() return failure\n");
@@ -1106,7 +1109,7 @@ uap_open(struct net_device *dev)
 		return UAP_STATUS_FAILURE;
 	}
 
-	if (MODULE_GET == 0)
+	if (try_module_get(THIS_MODULE) == 0)
 		return UAP_STATUS_FAILURE;
 
 	priv->open = TRUE;
@@ -1137,7 +1140,7 @@ uap_close(struct net_device *dev)
 	os_stop_queue(priv);
 	os_carrier_off(priv);
 
-	MODULE_PUT;
+	module_put(THIS_MODULE);
 	priv->open = FALSE;
 	LEAVE();
 	return UAP_STATUS_SUCCESS;
@@ -1237,7 +1240,7 @@ uap_tx_timeout(struct net_device *dev)
 
 	ENTER();
 	PRINTM(DATA, "Tx timeout\n");
-	UpdateTransStart(dev);
+    dev->trans_start = jiffies;
 	priv->num_tx_timeout++;
 	priv->adapter->IntCounter++;
 	wake_up_interruptible(&priv->MainThread.waitQ);
@@ -1273,7 +1276,7 @@ uap_hard_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	skb_queue_tail(&priv->adapter->tx_queue, skb);
 	wake_up_interruptible(&priv->MainThread.waitQ);
 	if (skb_queue_len(&priv->adapter->tx_queue) > TX_HIGH_WATERMARK) {
-		UpdateTransStart(dev);
+		dev->trans_start = jiffies;
 		os_stop_queue(priv);
 	}
 done:
@@ -1456,7 +1459,7 @@ uap_add_card(void *card)
 
 	ENTER();
 
-	if (OS_ACQ_SEMAPHORE_BLOCK(&AddRemoveCardSem))
+	if (down_interruptible(&AddRemoveCardSem))
 		goto exit_sem_err;
 
 	/* Allocate an Ethernet device */
@@ -1506,7 +1509,8 @@ uap_add_card(void *card)
 	spin_lock_init(&priv->driver_lock);
 	uap_create_thread(uap_service_main_thread, &priv->MainThread, "uap_main_service");
 	while (priv->MainThread.pid == 0) {
-		os_sched_timeout(2);
+		set_current_state(TASK_INTERRUPTIBLE);
+		schedule_timeout(2);
 	}
 
 	/* Register the device */
@@ -1542,7 +1546,7 @@ uap_add_card(void *card)
 	uap_proc_entry(priv, dev);
 	uap_debug_entry(priv, dev);
 #endif /* CPNFIG_PROC_FS */
-	OS_REL_SEMAPHORE(&AddRemoveCardSem);
+	up(&AddRemoveCardSem);
 
 	LEAVE();
 	return priv;
@@ -1554,7 +1558,8 @@ err_registerdev:
 	priv->adapter->SurpriseRemoved = TRUE;
 	wake_up_interruptible(&priv->MainThread.waitQ);
 	while (priv->MainThread.pid) {
-		os_sched_timeout(1);
+		set_current_state(TASK_INTERRUPTIBLE);
+		schedule_timeout(1);
 	}
 error:
 	if (dev) {
@@ -1565,7 +1570,7 @@ error:
 		free_netdev(dev);
 		uappriv = NULL;
 	}
-	OS_REL_SEMAPHORE(&AddRemoveCardSem);
+	up(&AddRemoveCardSem);
 exit_sem_err:
 	LEAVE();
 	return NULL;
@@ -1586,7 +1591,7 @@ uap_remove_card(void *card)
 
 	ENTER();
 
-	if (OS_ACQ_SEMAPHORE_BLOCK(&AddRemoveCardSem))
+	if (down_interruptible(&AddRemoveCardSem))
 		goto exit_sem_err;
 
 	if (!priv || !(Adapter = priv->adapter)) {
@@ -1618,7 +1623,8 @@ uap_remove_card(void *card)
 	PRINTM(INFO, "Unregister finish\n");
 	wake_up_interruptible(&priv->MainThread.waitQ);
 	while (priv->MainThread.pid) {
-		os_sched_timeout(1);
+		set_current_state(TASK_INTERRUPTIBLE);
+		schedule_timeout(1);
 	}
 
 	if ((Adapter->nl_sk) && ((Adapter->nl_sk)->sk_socket)) {
@@ -1637,7 +1643,7 @@ uap_remove_card(void *card)
 	uappriv = NULL;
 
 exit_remove:
-	OS_REL_SEMAPHORE(&AddRemoveCardSem);
+	up(&AddRemoveCardSem);
 exit_sem_err:
 	LEAVE();
 	return UAP_STATUS_SUCCESS;
@@ -1654,7 +1660,7 @@ uap_init_module(void)
 	int ret = UAP_STATUS_SUCCESS;
 	ENTER();
 
-	OS_INIT_SEMAPHORE(&AddRemoveCardSem);
+	sema_init(&AddRemoveCardSem, 1);
 	ret = sbi_register();
 	LEAVE();
 	return ret;
@@ -1668,13 +1674,13 @@ uap_cleanup_module(void)
 {
 	ENTER();
 
-	if (OS_ACQ_SEMAPHORE_BLOCK(&AddRemoveCardSem))
+	if (down_interruptible(&AddRemoveCardSem))
 		goto exit_sem_err;
 
 	if ((uappriv) && (uappriv->adapter)) {
 		uap_func_shutdown(uappriv);
 	}
-	OS_REL_SEMAPHORE(&AddRemoveCardSem);
+	up(&AddRemoveCardSem);
 exit_sem_err:
 	sbi_unregister();
 	LEAVE();
