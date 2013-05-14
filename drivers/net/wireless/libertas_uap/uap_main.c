@@ -44,6 +44,7 @@ uap_private *uappriv = NULL;
 #define DEFAULT_DEBUG_MASK	(DBG_MSG | DBG_FATAL | DBG_ERROR)
 u32 drvdbg = DEFAULT_DEBUG_MASK;
 #endif
+
 /** Helper name */
 char *helper_name = NULL;
 /** Firmware name */
@@ -91,7 +92,7 @@ uap_dnld_sleep_confirm_cmd(uap_private * priv)
  * @return		UAP_STATUS_SUCCESS for success otherwise UAP_STATUS_FAILURE
  */
 int
-uap_process_sleep_confirm_resp(uap_private * priv, u8 * resp, int resp_len)
+uap_process_sleep_confirm_resp(uap_private *priv, u8 *resp, int resp_len)
 {
 	int ret = UAP_STATUS_SUCCESS;
 	HostCmd_DS_COMMAND *cmd;
@@ -126,7 +127,7 @@ done:
  * @return	n/a
  */
 static void
-uap_ps_cond_check(uap_private * priv)
+uap_ps_cond_check(uap_private *priv)
 {
 	uap_adapter *Adapter = priv->adapter;
 
