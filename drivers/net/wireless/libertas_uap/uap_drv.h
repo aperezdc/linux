@@ -343,38 +343,6 @@ typedef struct
 	void *priv;
 } uap_thread;
 
-static inline void
-uap_activate_thread(uap_thread * thr)
-{
-	/** Record the thread pid */
-	thr->pid = current->pid;
-
-	/** Initialize the wait queue */
-	init_waitqueue_head(&thr->waitQ);
-}
-
-static inline void
-uap_deactivate_thread(uap_thread * thr)
-{
-	thr->pid = 0;
-	return;
-}
-
-static inline void
-uap_create_thread(int (*uapfunc) (void *), uap_thread * thr, char *name)
-{
-	thr->task = kthread_run(uapfunc, thr, "%s", name);
-}
-
-static inline int
-uap_terminate_thread(uap_thread * thr)
-{
-	/* Check if the thread is active or not */
-	if (!thr->pid)
-		return -1;
-	kthread_stop(thr->task);
-	return 0;
-}
 
 /** Data structure for the Marvell uAP device */
 typedef struct _uap_dev
@@ -498,19 +466,6 @@ struct _uap_adapter
 	/** Number of wakeup tries */
 	u32 WakeupTries;
 };
-
-static inline int
-os_upload_rx_packet(uap_private * priv, struct sk_buff *skb)
-{
-	skb->dev = priv->uap_dev.netdev;
-	skb->protocol = eth_type_trans(skb, priv->uap_dev.netdev);
-	skb->ip_summed = CHECKSUM_UNNECESSARY;
-	if (in_interrupt())
-		netif_rx(skb);
-	else
-		netif_rx_ni(skb);
-	return 0;
-}
 
 /*
  *  netif carrier_on/off and start(wake)/stop_queue handling
