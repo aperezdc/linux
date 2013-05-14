@@ -30,15 +30,7 @@
 #include <linux/interrupt.h>
 #include <linux/proc_fs.h>
 #include <linux/kthread.h>
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27)
 #include <linux/semaphore.h>
-#else
-#include <asm/semaphore.h>
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,18)
-#include <linux/config.h>
-#endif
 
 /* Net header files */
 #include <linux/netdevice.h>
@@ -50,10 +42,7 @@
 #include <linux/netlink.h>
 #include <linux/firmware.h>
 #include <linux/delay.h>
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0)
 #include <net/scm.h>
-#endif
 
 #include "uap_drv.h"
 #include "uap_fw.h"

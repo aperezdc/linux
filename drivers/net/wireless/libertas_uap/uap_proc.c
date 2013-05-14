@@ -138,12 +138,10 @@ static const struct file_operations hwstatus_fops = {
 void
 uap_proc_entry(uap_private *priv, struct net_device *dev)
 {
-	struct proc_dir_entry *r = PROC_DIR;
-
 	PRINTM(INFO, "Creating Proc Interface\n");
 	/* Check if uap directory already exists */
 	if (!priv->proc_uap) {
-		if (!(priv->proc_uap = proc_mkdir("uap", r))) {
+		if (!(priv->proc_uap = proc_mkdir("uap", NULL))) {
 			PRINTM(MSG, "Failed to create /proc/<dev>/");
 			return;
 		}
@@ -170,7 +168,7 @@ uap_proc_remove(uap_private *priv)
 			remove_proc_entry("hwstatus", priv->proc_entry);
 		}
 		remove_proc_entry(priv->uap_dev.netdev->name, priv->proc_uap);
-		remove_proc_entry("uap", PROC_DIR);
+		remove_proc_entry("uap", NULL);
 	}
 }
 
