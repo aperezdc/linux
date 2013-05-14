@@ -45,11 +45,6 @@ uap_private *uappriv = NULL;
 u32 drvdbg = DEFAULT_DEBUG_MASK;
 #endif
 
-/** Helper name */
-char *helper_name = NULL;
-/** Firmware name */
-char *fw_name = NULL;
-
 /** Semaphore for add/remove card */
 SEMAPHORE AddRemoveCardSem;
 
@@ -495,7 +490,7 @@ uap_init_fw(uap_private *priv)
 	if (sbi_check_fw_status(priv, 1) == UAP_STATUS_SUCCESS) {
 		PRINTM(MSG, "UAP FW already running! Skip FW download\n");
 	} else {
-		if ((ret = request_firmware(&priv->fw_helper, helper_name,
+		if ((ret = request_firmware(&priv->fw_helper, "mrvl/sd8688_helper.bin",
 					    priv->hotplug_device)) < 0) {
 			PRINTM(FATAL,
 			       "request_firmware() failed (helper), error code = %#x\n",
@@ -512,7 +507,7 @@ uap_init_fw(uap_private *priv)
 			ret = UAP_STATUS_FAILURE;
 			goto done;
 		}
-		if ((ret = request_firmware(&priv->firmware, fw_name,
+		if ((ret = request_firmware(&priv->firmware, "mrvl/sd8688_ap.bin",
 					    priv->hotplug_device)) < 0) {
 			PRINTM(FATAL, "request_firmware() failed, error code = %#x\n", ret);
 			goto done;
@@ -537,13 +532,6 @@ uap_init_fw(uap_private *priv)
 	sbi_claim_irq(priv);
 	sbi_enable_host_int(priv);
 	priv->adapter->HardwareStatus = HWReady;
-
-#if 0
-	if (uap_func_init(priv) != UAP_STATUS_SUCCESS) {
-		ret = UAP_STATUS_FAILURE;
-		goto done;
-	}
-#endif
 
 done:
 	if (priv->fw_helper)
@@ -1694,12 +1682,12 @@ exit_sem_err:
 
 module_init(uap_init_module);
 module_exit(uap_cleanup_module);
-module_param(helper_name, charp, 0);
-MODULE_PARM_DESC(helper_name, "Helper name");
-module_param(fw_name, charp, 0);
-MODULE_PARM_DESC(fw_name, "Firmware name");
 
 MODULE_DESCRIPTION("M-UAP Driver");
 MODULE_AUTHOR("Marvell International Ltd.");
 MODULE_VERSION(DRIVER_VERSION);
 MODULE_LICENSE("GPL");
+
+MODULE_FIRMWARE("mrvl/sd8688_helper.bin");
+MODULE_FIRMWARE("mrvl/sd8688_ap.bin");
+
