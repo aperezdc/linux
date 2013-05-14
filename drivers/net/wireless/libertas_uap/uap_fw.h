@@ -50,7 +50,7 @@ typedef struct _TxPD
 	u32 TxControl;
 	/** reserved */
 	u32 reserved[2];
-} __ATTRIB_PACK__ TxPD, *PTxPD;
+} __attribute__((packed)) TxPD, *PTxPD;
 
 /** RxPD Descriptor */
 typedef struct _RxPD
@@ -63,7 +63,7 @@ typedef struct _RxPD
 	u16 RxPktLength;
 	/** Tx packet offset */
 	u16 RxPktOffset;
-} __ATTRIB_PACK__ RxPD, *PRxPD;
+} __attribute__((packed)) RxPD, *PRxPD;
 
 #ifdef BIG_ENDIAN
 /** Convert from 16 bit little endian format to CPU format */
@@ -208,7 +208,7 @@ typedef struct
 	u16 SeqNum;
 	/** Result */
 	u16 Result;
-} __ATTRIB_PACK__ HostCmd_DS_GEN;
+} __attribute__((packed)) HostCmd_DS_GEN;
 
 /** Size of HostCmd_DS_GEN */
 #define S_DS_GEN	sizeof(HostCmd_DS_GEN)
@@ -220,7 +220,7 @@ typedef struct
 	u16 Command;
 	/** Command Header: Size */
 	u16 Size;
-} __ATTRIB_PACK__ HostCmd_HEADER;
+} __attribute__((packed)) HostCmd_HEADER;
 
 /** HostCmd_SYS_CONFIG */
 typedef struct _HostCmd_SYS_CONFIG
@@ -229,7 +229,7 @@ typedef struct _HostCmd_SYS_CONFIG
 	u16 Action;
 	/** Tlv buffer */
 	u8 TlvBuffer[0];
-} __ATTRIB_PACK__ HostCmd_SYS_CONFIG;
+} __attribute__((packed)) HostCmd_SYS_CONFIG;
 
 /** HostCmd_DS_POWER_MGMT_EXT */
 typedef struct _HostCmd_DS_POWER_MGMT_EXT
@@ -238,7 +238,7 @@ typedef struct _HostCmd_DS_POWER_MGMT_EXT
 	u16 action;
 	/** power mode */
 	u16 power_mode;
-} __ATTRIB_PACK__ HostCmd_DS_POWER_MGMT_EXT;
+} __attribute__((packed)) HostCmd_DS_POWER_MGMT_EXT;
 
 /** _HostCmd_DS_COMMAND*/
 typedef struct _HostCmd_DS_COMMAND
@@ -258,7 +258,7 @@ typedef struct _HostCmd_DS_COMMAND
 		HostCmd_DS_POWER_MGMT_EXT pm_cfg;
 
 	} params;
-} __ATTRIB_PACK__ HostCmd_DS_COMMAND;
+} __attribute__((packed)) HostCmd_DS_COMMAND;
 
 /** MrvlIEtypesHeader_*/
 typedef struct _MrvlIEtypesHeader
@@ -267,7 +267,7 @@ typedef struct _MrvlIEtypesHeader
 	u16 Type;
 	/** Header length */
 	u16 Len;
-} __ATTRIB_PACK__ MrvlIEtypesHeader_t;
+} __attribute__((packed)) MrvlIEtypesHeader_t;
 
 /** MrvlIEtypes_Data_t */
 typedef struct _MrvlIEtypes_Data_t
@@ -276,7 +276,7 @@ typedef struct _MrvlIEtypes_Data_t
 	MrvlIEtypesHeader_t Header;
 	/** Data */
 	u8 Data[1];
-} __ATTRIB_PACK__ MrvlIEtypes_Data_t;
+} __attribute__((packed)) MrvlIEtypes_Data_t;
 
 /** MrvlIEtypes_ChanListParamSet_t */
 typedef struct _MrvlIEtypes_MacAddr_t
@@ -285,7 +285,7 @@ typedef struct _MrvlIEtypes_MacAddr_t
 	MrvlIEtypesHeader_t Header;
 	/** AP MAC address */
 	u8 ApMacAddr[ETH_ALEN];
-} __ATTRIB_PACK__ MrvlIEtypes_MacAddr_t;
+} __attribute__((packed)) MrvlIEtypes_MacAddr_t;
 
 /** Event ID: BSS started */
 #define MICRO_AP_EV_ID_BSS_START	46
@@ -326,7 +326,7 @@ typedef struct _MrvlIEtypes_sleep_param_t
 	u32 min_sleep;
 	/** max_sleep */
 	u32 max_sleep;
-} __ATTRIB_PACK__ MrvlIEtypes_sleep_param_t;
+} __attribute__((packed)) MrvlIEtypes_sleep_param_t;
 
 /** MrvlIEtypes_inact_sleep_param_t */
 typedef struct _MrvlIEtypes_inact_sleep_param_t
@@ -339,7 +339,7 @@ typedef struct _MrvlIEtypes_inact_sleep_param_t
 	u32 min_awake;
 	/** max_awake */
 	u32 max_awake;
-} __ATTRIB_PACK__ MrvlIEtypes_inact_sleep_param_t;
+} __attribute__((packed)) MrvlIEtypes_inact_sleep_param_t;
 
 /** AP_Event */
 typedef struct _AP_Event
@@ -354,5 +354,5 @@ typedef struct _AP_Event
 	u16 status;
 	/** AP MAC address */
 	u8 MacAddr[ETH_ALEN];
-} __ATTRIB_PACK__ AP_Event;
+} __attribute__((packed)) AP_Event;
 #endif /* _UAP_FW_H */
