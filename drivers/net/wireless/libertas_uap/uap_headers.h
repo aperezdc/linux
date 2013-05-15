@@ -21,39 +21,38 @@
 #ifndef _UAP_HEADERS_H
 #define _UAP_HEADERS_H
 
-/* Linux header files */
-#include    <linux/kernel.h>
-#include    <linux/module.h>
-#include    <linux/init.h>
-#include    <linux/version.h>
-#include    <linux/param.h>
-#include    <linux/types.h>
-#include    <linux/interrupt.h>
-#include    <linux/proc_fs.h>
-#include    <linux/kthread.h>
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/init.h>
+#include <linux/version.h>
+#include <linux/param.h>
+#include <linux/types.h>
+#include <linux/interrupt.h>
+#include <linux/proc_fs.h>
+#include <linux/kthread.h>
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27)
-#include    <linux/semaphore.h>
+#include <linux/semaphore.h>
 #else
-#include    <asm/semaphore.h>
+#include <asm/semaphore.h>
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,18)
-#include    <linux/config.h>
+#include <linux/config.h>
 #endif
 
 /* Net header files */
-#include    <linux/netdevice.h>
-#include    <linux/net.h>
-#include    <linux/skbuff.h>
-#include    <linux/if_ether.h>
-#include    <linux/etherdevice.h>
-#include    <net/sock.h>
-#include    <linux/netlink.h>
-#include    <linux/firmware.h>
-#include    <linux/delay.h>
+#include <linux/netdevice.h>
+#include <linux/net.h>
+#include <linux/skbuff.h>
+#include <linux/if_ether.h>
+#include <linux/etherdevice.h>
+#include <net/sock.h>
+#include <linux/netlink.h>
+#include <linux/firmware.h>
+#include <linux/delay.h>
 
-#include    "uap_drv.h"
-#include    "uap_fw.h"
+#include "uap_drv.h"
+#include "uap_fw.h"
 
 #include <linux/mmc/sdio.h>
 #include <linux/mmc/sdio_ids.h>

@@ -1,23 +1,24 @@
-/** @file uap_drv.h
-  * @brief This file contains Linux OS related definitions and
-  * declarations, uAP driver
-  *
-  * Copyright (C) 2008-2009, Marvell International Ltd.
-  *
-  * This software file (the "File") is distributed by Marvell International
-  * Ltd. under the terms of the GNU General Public License Version 2, June 1991
-  * (the "License").  You may use, redistribute and/or modify this File in
-  * accordance with the terms and conditions of the License, a copy of which
-  * is available along with the File in the gpl.txt file or by writing to
-  * the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
-  * 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
-  *
-  * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE
-  * ARE EXPRESSLY DISCLAIMED.  The License provides additional details about
-  * this warranty disclaimer.
-  *
-  */
+/**
+ * @file uap_drv.h
+ * @brief This file contains Linux OS related definitions and
+ * declarations, uAP driver
+ *
+ * Copyright (C) 2008-2009, Marvell International Ltd.
+ *
+ * This software file (the "File") is distributed by Marvell International
+ * Ltd. under the terms of the GNU General Public License Version 2, June 1991
+ * (the "License").  You may use, redistribute and/or modify this File in
+ * accordance with the terms and conditions of the License, a copy of which
+ * is available along with the File in the gpl.txt file or by writing to
+ * the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+ * 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
+ *
+ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE
+ * ARE EXPRESSLY DISCLAIMED.  The License provides additional details about
+ * this warranty disclaimer.
+ *
+ */
 
 #ifndef _UAP_DRV_H
 #define _UAP_DRV_H
@@ -109,18 +110,18 @@ extern u32 drvdbg;
 
 /** Wait until a condition becomes true */
 #define ASSERT(cond)						\
-do {								\
-	if (!(cond))						\
+	do {							\
+		if (!(cond))					\
 		PRINTM(INFO, "ASSERT: %s, %s:%i\n",		\
 		       __FUNCTION__, __FILE__, __LINE__);	\
-} while(0)
+	} while(0)
 
 /** Log enrty point for debugging */
-#define ENTER()                 PRINTM(ENTRY, "Enter: %s, %s:%i\n", __FUNCTION__, \
-                                                        __FILE__, __LINE__)
+#define ENTER()	PRINTM(ENTRY, "Enter: %s, %s:%i\n", __FUNCTION__, \
+		       __FILE__, __LINE__)
 /** Log exit point for debugging */
-#define LEAVE()                 PRINTM(ENTRY, "Leave: %s, %s:%i\n", __FUNCTION__, \
-                                                        __FILE__, __LINE__)
+#define LEAVE()	PRINTM(ENTRY, "Leave: %s, %s:%i\n", __FUNCTION__, \
+		       __FILE__, __LINE__)
 
 #ifdef	DEBUG_LEVEL1
 /** Dump buffer length */
@@ -133,24 +134,24 @@ do {								\
 static inline void
 hexdump(char *prompt, u8 * buf, int len)
 {
-    int i;
-    char dbgdumpbuf[DBG_DUMP_BUF_LEN];
-    char *ptr = dbgdumpbuf;
+	int i;
+	char dbgdumpbuf[DBG_DUMP_BUF_LEN];
+	char *ptr = dbgdumpbuf;
 
-    printk(KERN_DEBUG "%s:\n", prompt);
-    for (i = 1; i <= len; i++) {
-        ptr += sprintf(ptr, "%02x ", *buf);
-        buf++;
-        if (i % MAX_DUMP_PER_LINE == 0) {
-            *ptr = 0;
-            printk(KERN_DEBUG "%s\n", dbgdumpbuf);
-            ptr = dbgdumpbuf;
-        }
-    }
-    if (len % MAX_DUMP_PER_LINE) {
-        *ptr = 0;
-        printk(KERN_DEBUG "%s\n", dbgdumpbuf);
-    }
+	printk(KERN_DEBUG "%s:\n", prompt);
+	for (i = 1; i <= len; i++) {
+		ptr += sprintf(ptr, "%02x ", *buf);
+		buf++;
+		if (i % MAX_DUMP_PER_LINE == 0) {
+			*ptr = 0;
+			printk(KERN_DEBUG "%s\n", dbgdumpbuf);
+			ptr = dbgdumpbuf;
+		}
+	}
+	if (len % MAX_DUMP_PER_LINE) {
+		*ptr = 0;
+		printk(KERN_DEBUG "%s\n", dbgdumpbuf);
+	}
 }
 
 /** Debug command */
@@ -202,8 +203,8 @@ typedef u8 BOOLEAN;
 static inline void
 os_sched_timeout(u32 millisec)
 {
-    set_current_state(TASK_INTERRUPTIBLE);
-    schedule_timeout((millisec * HZ) / 1000);
+	set_current_state(TASK_INTERRUPTIBLE);
+	schedule_timeout((millisec * HZ) / 1000);
 }
 
 /** Maximum size of ethernet packet */
@@ -214,17 +215,17 @@ os_sched_timeout(u32 millisec)
 
 /** Find minimum */
 #ifndef MIN
-#define MIN(a,b)		((a) < (b) ? (a) : (b))
+#define MIN(a, b)	((a) < (b) ? (a) : (b))
 #endif
 
 /** Find maximum */
 #ifndef MAX
-#define MAX(a,b)		((a) > (b) ? (a) : (b))
+#define MAX(a, b)	((a) > (b) ? (a) : (b))
 #endif
 
 /** Find number of elements */
 #ifndef NELEMENTS
-#define NELEMENTS(x) (sizeof(x)/sizeof(x[0]))
+#define NELEMENTS(x)	(sizeof(x) / sizeof(x[0]))
 #endif
 
 /** Buffer Constants */
@@ -289,23 +290,23 @@ os_sched_timeout(u32 millisec)
 /** sleep_param */
 typedef struct _ps_sleep_param
 {
-    /** control bitmap */
-    u32 ctrl_bitmap;
-    /** minimum sleep period (micro second) */
-    u32 min_sleep;
-    /** maximum sleep period (micro second) */
-    u32 max_sleep;
+	/** control bitmap */
+	u32 ctrl_bitmap;
+	/** minimum sleep period (micro second) */
+	u32 min_sleep;
+	/** maximum sleep period (micro second) */
+	u32 max_sleep;
 } ps_sleep_param;
 
 /** inactivity sleep_param */
 typedef struct _inact_sleep_param
 {
-    /** inactivity timeout (micro second) */
-    u32 inactivity_to;
-    /** miniumu awake period (micro second) */
-    u32 min_awake;
-    /** maximum awake period (micro second) */
-    u32 max_awake;
+	/** inactivity timeout (micro second) */
+	u32 inactivity_to;
+	/** miniumu awake period (micro second) */
+	u32 min_awake;
+	/** maximum awake period (micro second) */
+	u32 max_awake;
 } inact_sleep_param;
 
 /** flag for ps mode */
@@ -329,14 +330,14 @@ typedef struct _inact_sleep_param
 /** ps_mgmt */
 typedef struct _ps_mgmt
 {
-    /** flags for valid field */
-    u16 flags;
-    /** power mode */
-    u16 ps_mode;
-    /** sleep param */
-    ps_sleep_param sleep_param;
-    /** inactivity sleep param */
-    inact_sleep_param inact_param;
+	/** flags for valid field */
+	u16 flags;
+	/** power mode */
+	u16 ps_mode;
+	/** sleep param */
+	ps_sleep_param sleep_param;
+	/** inactivity sleep param */
+	inact_sleep_param inact_param;
 } ps_mgmt;
 
 /** Semaphore structure */
@@ -355,20 +356,20 @@ extern uap_private *uappriv;
 /** Hardware status codes */
 typedef enum _HARDWARE_STATUS
 {
-    HWReady,
-    HWInitializing,
-    HWReset,
-    HWClosing,
-    HWNotReady
+	HWReady,
+	HWInitializing,
+	HWReset,
+	HWClosing,
+	HWNotReady
 } HARDWARE_STATUS;
 
 /** info for debug purpose */
 typedef struct _uap_dbg
 {
-        /** Number of host to card command failures */
-    u32 num_cmd_host_to_card_failure;
-        /** Number of host to card Tx failures */
-    u32 num_tx_host_to_card_failure;
+	/** Number of host to card command failures */
+	u32 num_cmd_host_to_card_failure;
+	/** Number of host to card Tx failures */
+	u32 num_tx_host_to_card_failure;
 } uap_dbg;
 
 /** Set thread state */
@@ -376,183 +377,183 @@ typedef struct _uap_dbg
 
 typedef struct
 {
-    /** Task */
-    struct task_struct *task;
-    /** Queue */
-    wait_queue_head_t waitQ;
-    /** PID */
-    pid_t pid;
-    /** Private structure */
-    void *priv;
+	/** Task */
+	struct task_struct *task;
+	/** Queue */
+	wait_queue_head_t waitQ;
+	/** PID */
+	pid_t pid;
+	/** Private structure */
+	void *priv;
 } uap_thread;
 
 static inline void
 uap_activate_thread(uap_thread * thr)
 {
-        /** Record the thread pid */
-    thr->pid = current->pid;
+	/** Record the thread pid */
+	thr->pid = current->pid;
 
-        /** Initialize the wait queue */
-    init_waitqueue_head(&thr->waitQ);
+	/** Initialize the wait queue */
+	init_waitqueue_head(&thr->waitQ);
 }
 
 static inline void
 uap_deactivate_thread(uap_thread * thr)
 {
-    thr->pid = 0;
-    return;
+	thr->pid = 0;
+	return;
 }
 
 static inline void
 uap_create_thread(int (*uapfunc) (void *), uap_thread * thr, char *name)
 {
-    thr->task = kthread_run(uapfunc, thr, "%s", name);
+	thr->task = kthread_run(uapfunc, thr, "%s", name);
 }
 
 static inline int
 uap_terminate_thread(uap_thread * thr)
 {
-    /* Check if the thread is active or not */
-    if (!thr->pid)
-        return -1;
-    kthread_stop(thr->task);
-    return 0;
+	/* Check if the thread is active or not */
+	if (!thr->pid)
+		return -1;
+	kthread_stop(thr->task);
+	return 0;
 }
 
 /** Data structure for the Marvell uAP device */
 typedef struct _uap_dev
 {
-        /** device name */
-    char name[DEV_NAME_LEN];
-        /** card pointer */
-    void *card;
-        /** IO port */
-    u32 ioport;
-        /** Rx unit */
-    u8 rx_unit;
-        /** Data sent:
-	    TRUE - Data is sent to fw, no Tx Done received
-	    FALSE - Tx done received for previous Tx */
-    BOOLEAN data_sent;
-        /** CMD sent:
-	    TRUE - CMD is sent to fw, no CMD Done received
-	    FALSE - CMD done received for previous CMD */
-    BOOLEAN cmd_sent;
-        /** netdev pointer */
-    struct net_device *netdev;
+	/** device name */
+	char name[DEV_NAME_LEN];
+	/** card pointer */
+	void *card;
+	/** IO port */
+	u32 ioport;
+	/** Rx unit */
+	u8 rx_unit;
+	/** Data sent:
+	  TRUE - Data is sent to fw, no Tx Done received
+	  FALSE - Tx done received for previous Tx */
+	BOOLEAN data_sent;
+	/** CMD sent:
+	  TRUE - CMD is sent to fw, no CMD Done received
+	  FALSE - CMD done received for previous CMD */
+	BOOLEAN cmd_sent;
+	/** netdev pointer */
+	struct net_device *netdev;
 } uap_dev_t, *puap_dev_t;
 
 /** Private structure for the MV device */
 struct _uap_private
 {
-        /** Device open */
-    int open;
+	/** Device open */
+	int open;
 
-        /** Device adapter structure */
-    uap_adapter *adapter;
-        /** Device structure */
-    uap_dev_t uap_dev;
+	/** Device adapter structure */
+	uap_adapter *adapter;
+	/** Device structure */
+	uap_dev_t uap_dev;
 
-        /** Net device statistics structure */
-    struct net_device_stats stats;
+	/** Net device statistics structure */
+	struct net_device_stats stats;
 
-        /** Number of Tx timeouts */
-    u32 num_tx_timeout;
+	/** Number of Tx timeouts */
+	u32 num_tx_timeout;
 
-        /** Media connection status */
-    BOOLEAN MediaConnected;
+	/** Media connection status */
+	BOOLEAN MediaConnected;
 
 #ifdef CONFIG_PROC_FS
-    struct proc_dir_entry *proc_uap;
-    struct proc_dir_entry *proc_entry;
-#endif                          /* CONFIG_PROC_FS */
+	struct proc_dir_entry *proc_uap;
+	struct proc_dir_entry *proc_entry;
+#endif /* CONFIG_PROC_FS */
 
-        /** Firmware helper */
-    const struct firmware *fw_helper;
-        /** Firmware */
-    const struct firmware *firmware;
-        /** Hotplug device */
-    struct device *hotplug_device;
-        /** thread to service interrupts */
-    uap_thread MainThread;
-        /** Driver lock */
-    spinlock_t driver_lock;
-        /** Driver lock flags */
-    ulong driver_flags;
+	/** Firmware helper */
+	const struct firmware *fw_helper;
+	/** Firmware */
+	const struct firmware *firmware;
+	/** Hotplug device */
+	struct device *hotplug_device;
+	/** thread to service interrupts */
+	uap_thread MainThread;
+	/** Driver lock */
+	spinlock_t driver_lock;
+	/** Driver lock flags */
+	ulong driver_flags;
 
 };
 
 /** PS_CMD_ConfirmSleep */
 typedef struct _PS_CMD_ConfirmSleep
 {
-        /** SDIO Length */
-    u16 SDLen;
-    /** SDIO Type */
-    u16 SDType;
-        /** Command */
-    u16 Command;
-        /** Size */
-    u16 Size;
-        /** Sequence number */
-    u16 SeqNum;
-        /** Result */
-    u16 Result;
+	/** SDIO Length */
+	u16 SDLen;
+	/** SDIO Type */
+	u16 SDType;
+	/** Command */
+	u16 Command;
+	/** Size */
+	u16 Size;
+	/** Sequence number */
+	u16 SeqNum;
+	/** Result */
+	u16 Result;
 } __ATTRIB_PACK__ PS_CMD_ConfirmSleep, *PPS_CMD_ConfirmSleep;
 
 /** Wlan Adapter data structure*/
 struct _uap_adapter
 {
-        /** Power save confirm sleep command */
-    PS_CMD_ConfirmSleep PSConfirmSleep;
-        /** Device status */
-    HARDWARE_STATUS HardwareStatus;
-        /** Interrupt counter */
-    u32 IntCounter;
-        /** Tx packet queue */
-    struct sk_buff_head tx_queue;
-        /** Cmd packet queue */
-    struct sk_buff_head cmd_queue;
-        /** Command sequence number */
-    u16 SeqNum;
-        /** Command buffer */
-    u8 *CmdBuf;
-        /** cmd pending flag */
-    u8 cmd_pending;
-        /** cmd wait option */
-    u8 cmd_wait_option;
-        /** Command buffer length */
-    u32 CmdSize;
-        /** Command wait queue */
-    wait_queue_head_t cmdwait_q __ATTRIB_ALIGN__;
-        /** Command wait queue state flag */
-    u8 CmdWaitQWoken;
-        /** PnP support */
-    BOOLEAN SurpriseRemoved;
-        /** Debug */
-    uap_dbg dbg;
-        /** Netlink kernel socket */
-    struct sock *nl_sk;
-        /** Semaphore for CMD */
-    SEMAPHORE CmdSem;
-         /** Power Save mode */
-    u8 psmode;
-        /** Power Save state */
-    u8 ps_state;
-        /** Number of wakeup tries */
-    u32 WakeupTries;
+	/** Power save confirm sleep command */
+	PS_CMD_ConfirmSleep PSConfirmSleep;
+	/** Device status */
+	HARDWARE_STATUS HardwareStatus;
+	/** Interrupt counter */
+	u32 IntCounter;
+	/** Tx packet queue */
+	struct sk_buff_head tx_queue;
+	/** Cmd packet queue */
+	struct sk_buff_head cmd_queue;
+	/** Command sequence number */
+	u16 SeqNum;
+	/** Command buffer */
+	u8 *CmdBuf;
+	/** cmd pending flag */
+	u8 cmd_pending;
+	/** cmd wait option */
+	u8 cmd_wait_option;
+	/** Command buffer length */
+	u32 CmdSize;
+	/** Command wait queue */
+	wait_queue_head_t cmdwait_q __ATTRIB_ALIGN__;
+	/** Command wait queue state flag */
+	u8 CmdWaitQWoken;
+	/** PnP support */
+	BOOLEAN SurpriseRemoved;
+	/** Debug */
+	uap_dbg dbg;
+	/** Netlink kernel socket */
+	struct sock *nl_sk;
+	/** Semaphore for CMD */
+	SEMAPHORE CmdSem;
+	/** Power Save mode */
+	u8 psmode;
+	/** Power Save state */
+	u8 ps_state;
+	/** Number of wakeup tries */
+	u32 WakeupTries;
 };
 
 static inline int
 os_upload_rx_packet(uap_private * priv, struct sk_buff *skb)
 {
-    skb->dev = priv->uap_dev.netdev;
-    skb->protocol = eth_type_trans(skb, priv->uap_dev.netdev);
-    skb->ip_summed = CHECKSUM_UNNECESSARY;
-    if (in_interrupt())
-        netif_rx(skb);
-    else
-        netif_rx_ni(skb);
-    return 0;
+	skb->dev = priv->uap_dev.netdev;
+	skb->protocol = eth_type_trans(skb, priv->uap_dev.netdev);
+	skb->ip_summed = CHECKSUM_UNNECESSARY;
+	if (in_interrupt())
+		netif_rx(skb);
+	else
+		netif_rx_ni(skb);
+	return 0;
 }
 
 /*
@@ -561,35 +562,35 @@ os_upload_rx_packet(uap_private * priv, struct sk_buff *skb)
 static inline void
 os_carrier_on(uap_private * priv)
 {
-    if (!netif_carrier_ok(priv->uap_dev.netdev) &&
-        (priv->MediaConnected == TRUE)) {
-        netif_carrier_on(priv->uap_dev.netdev);
-    }
+	if (!netif_carrier_ok(priv->uap_dev.netdev) &&
+	    (priv->MediaConnected == TRUE)) {
+		netif_carrier_on(priv->uap_dev.netdev);
+	}
 }
 
-static inline void
+	static inline void
 os_carrier_off(uap_private * priv)
 {
-    if (netif_carrier_ok(priv->uap_dev.netdev)) {
-        netif_carrier_off(priv->uap_dev.netdev);
-    }
+	if (netif_carrier_ok(priv->uap_dev.netdev)) {
+		netif_carrier_off(priv->uap_dev.netdev);
+	}
 }
 
-static inline void
+	static inline void
 os_start_queue(uap_private * priv)
 {
-    if (netif_queue_stopped(priv->uap_dev.netdev) &&
-        (priv->MediaConnected == TRUE)) {
-        netif_wake_queue(priv->uap_dev.netdev);
-    }
+	if (netif_queue_stopped(priv->uap_dev.netdev) &&
+	    (priv->MediaConnected == TRUE)) {
+		netif_wake_queue(priv->uap_dev.netdev);
+	}
 }
 
-static inline void
+	static inline void
 os_stop_queue(uap_private * priv)
 {
-    if (!netif_queue_stopped(priv->uap_dev.netdev)) {
-        netif_stop_queue(priv->uap_dev.netdev);
-    }
+	if (!netif_queue_stopped(priv->uap_dev.netdev)) {
+		netif_stop_queue(priv->uap_dev.netdev);
+	}
 }
 
 /** Interface specific header */
@@ -599,13 +600,13 @@ os_stop_queue(uap_private * priv)
 #define HEADER_ALIGNMENT	8
 
 /** The number of times to try when polling for status bits */
-#define MAX_POLL_TRIES			100
+#define MAX_POLL_TRIES		100
 
 /** Length of SNAP header */
-#define MRVDRV_SNAP_HEADER_LEN          8
+#define MRVDRV_SNAP_HEADER_LEN	8
 
 /** Extra length of Tx packet buffer */
-#define EXTRA_LEN	36
+#define EXTRA_LEN		36
 
 /** Buffer size for ethernet Tx packets */
 #define MRVDRV_ETH_TX_PACKET_BUFFER_SIZE \
@@ -619,9 +620,9 @@ os_stop_queue(uap_private * priv)
 /** Packet type: data, command & event */
 typedef enum _mv_type
 {
-    MV_TYPE_DAT = 0,
-    MV_TYPE_CMD = 1,
-    MV_TYPE_EVENT = 3
+	MV_TYPE_DAT = 0,
+	MV_TYPE_CMD = 1,
+	MV_TYPE_EVENT = 3
 } mv_type;
 
 /** Disable interrupt */
@@ -629,39 +630,39 @@ typedef enum _mv_type
 /** Enable interrupt */
 #define	OS_INT_RESTORE	spin_unlock_irqrestore(&priv->driver_lock, priv->driver_flags)
 
-int uap_process_rx_packet(uap_private * priv, struct sk_buff *skb);
-void uap_interrupt(uap_private * priv);
+int uap_process_rx_packet(uap_private *priv, struct sk_buff *skb);
+void uap_interrupt(uap_private *priv);
 uap_private *uap_add_card(void *card);
 int uap_remove_card(void *card);
-int uap_process_event(uap_private * priv, u8 * payload, uint len);
-int uap_soft_reset(uap_private * priv);
-int uap_process_sleep_confirm_resp(uap_private * priv, u8 * resp, int resp_len);
+int uap_process_event(uap_private *priv, u8 *payload, uint len);
+int uap_soft_reset(uap_private *priv);
+int uap_process_sleep_confirm_resp(uap_private *priv, u8 *resp, int resp_len);
 
 #ifdef CONFIG_PROC_FS
 /** The proc fs interface */
-void uap_proc_entry(uap_private * priv, struct net_device *dev);
-void uap_proc_remove(uap_private * priv);
+void uap_proc_entry(uap_private *priv, struct net_device *dev);
+void uap_proc_remove(uap_private *priv);
 int string_to_number(char *s);
-void uap_debug_entry(uap_private * priv, struct net_device *dev);
-void uap_debug_remove(uap_private * priv);
+void uap_debug_entry(uap_private *priv, struct net_device *dev);
+void uap_debug_remove(uap_private *priv);
 #endif /* CONFIG_PROC_FS */
 
 int sbi_register(void);
 void sbi_unregister(void);
-int sbi_register_dev(uap_private * priv);
-int sbi_unregister_dev(uap_private * priv);
-int sbi_prog_fw_w_helper(uap_private *);
+int sbi_register_dev(uap_private *priv);
+int sbi_unregister_dev(uap_private *priv);
+int sbi_prog_fw_w_helper(uap_private *priv);
 
-int sbi_host_to_card(uap_private * priv, u8 * payload, u16 nb);
-int sbi_claim_irq(uap_private * priv);
-int sbi_enable_host_int(uap_private * priv);
-int sbi_disable_host_int(uap_private * priv);
+int sbi_host_to_card(uap_private *priv, u8 *payload, u16 nb);
+int sbi_claim_irq(uap_private *priv);
+int sbi_enable_host_int(uap_private *priv);
+int sbi_disable_host_int(uap_private *priv);
 
-int sbi_get_int_status(uap_private * priv, u8 * ireg);
+int sbi_get_int_status(uap_private *priv, u8 *ireg);
 /** Check firmware status */
-int sbi_check_fw_status(uap_private *, int);
-int sbi_prog_helper(uap_private *);
+int sbi_check_fw_status(uap_private *priv, int);
+int sbi_prog_helper(uap_private *priv);
 
-int sbi_wakeup_firmware(uap_private * priv);
+int sbi_wakeup_firmware(uap_private *priv);
 
 #endif /* _UAP_DRV_H */
