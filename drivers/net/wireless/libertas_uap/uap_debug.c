@@ -17,211 +17,95 @@
  * this warranty disclaimer.
  *
  */
-#ifdef CONFIG_PROC_FS
-#include "uap_headers.h"
+#ifdef CONFIG_DEBUG_FS
 
-/********************************************************
-  Local Variables
- ********************************************************/
+#include <linux/debugfs.h>
+#include <linux/netdevice.h>
+#include "uap_drv.h"
 
-#define item_size(n) (sizeof ((uap_adapter *)0)->n)
-#define item_addr(n) ((u32) &((uap_adapter *)0)->n)
-
-#define item_dbg_size(n) (sizeof (((uap_adapter *)0)->dbg.n))
-#define item_dbg_addr(n) ((u32) &(((uap_adapter *)0)->dbg.n))
-
-#define item_dev_size(n) (sizeof ((uap_dev_t *)0)->n)
-#define item_dev_addr(n) ((u32) &((uap_dev_t *)0)->n)
-
-/** MicroAp device offset */
-#define OFFSET_UAP_DEV		0x01
-/** Bluetooth adapter offset */
-#define OFFSET_UAP_ADAPTER	0x02
-
-struct debug_data
-{
-	/** Name */
-	char name[32];
-	/** Size */
-	u32 size;
-	/** Address */
-	u32 addr;
-	/** Offset */
-	u32 offset;
-	/** Flag */
-	u32 flag;
+enum debug_location {
+	LOCATION_UAP_DEV,
+	LOCATION_ADAPTER,
 };
 
-/* To debug any member of uap_adapter, simply add one line here.
-*/
-static struct debug_data items[] = {
-	{"cmd_sent", item_dev_size(cmd_sent), 0, item_dev_addr(cmd_sent),
-		OFFSET_UAP_DEV},
-	{"data_sent", item_dev_size(data_sent), 0, item_dev_addr(data_sent),
-		OFFSET_UAP_DEV},
-	{"IntCounter", item_size(IntCounter), 0, item_addr(IntCounter),
-		OFFSET_UAP_ADAPTER},
-	{"cmd_pending", item_size(cmd_pending), 0, item_addr(cmd_pending),
-		OFFSET_UAP_ADAPTER},
-	{"num_cmd_h2c_fail", item_dbg_size(num_cmd_host_to_card_failure), 0,
-		item_dbg_addr(num_cmd_host_to_card_failure), OFFSET_UAP_ADAPTER},
-	{"num_tx_h2c_fail", item_dbg_size(num_tx_host_to_card_failure), 0,
-		item_dbg_addr(num_tx_host_to_card_failure), OFFSET_UAP_ADAPTER},
-	{"psmode", item_size(psmode), 0, item_addr(psmode), OFFSET_UAP_ADAPTER},
-	{"ps_state", item_size(ps_state), 0, item_addr(ps_state),
-		OFFSET_UAP_ADAPTER},
-#ifdef DEBUG_LEVEL1
-	{"drvdbg", sizeof(drvdbg), (u32) & drvdbg, 0, 0}
-#endif
+#define debugfs_uap_dev_member(n)		\
+	(sizeof((uap_dev_t*) 0)->n),		\
+	((ptrdiff_t) &((uap_dev_t*) 0)->n),	\
+	LOCATION_UAP_DEV
+
+#define debugfs_adapter_member(n)		\
+	(sizeof((uap_adapter*) 0)->n),		\
+	((ptrdiff_t) &((uap_adapter*) 0)->n),	\
+	LOCATION_ADAPTER
+
+static const struct {
+	const char	   *name;
+	size_t		    size;
+	ptrdiff_t	    offset;
+	enum debug_location location;
+} debugfs_items[] = {
+	{ "cmd_sent",       debugfs_uap_dev_member(cmd_sent)                         },
+	{ "data_sent",      debugfs_uap_dev_member(data_sent)                        },
+	{ "int_count",      debugfs_adapter_member(IntCounter)                       },
+	{ "cmd_pending",    debugfs_adapter_member(cmd_pending)                      },
+	{ "ps_mode",        debugfs_adapter_member(psmode)                           },
+	{ "ps_state",       debugfs_adapter_member(ps_state)                         },
+	{ "cmd_h2c_failed", debugfs_adapter_member(dbg.num_cmd_host_to_card_failure) },
+	{ "tx_h2c_failed",  debugfs_adapter_member(dbg.num_tx_host_to_card_failure)  },
 };
 
-static int num_of_items = sizeof(items) / sizeof(items[0]);
 
-/********************************************************
-  Global Variables
- ********************************************************/
+static struct dentry *debugfs_module_dir = NULL;
 
-/********************************************************
-  Local Functions
- ********************************************************/
 
-static int show_debug(struct seq_file *m, void *v)
+void uap_debugfs_add_dev(uap_private *priv)
 {
-	struct debug_data *d = m->private;
 	unsigned i;
-	int val;
 
-	for (i = 0; i < num_of_items; i++) {
-		switch (d[i].size) {
-			case 1: val = *((u8 *) d[i].addr); break;
-			case 2: val = *((u16*) d[i].addr); break;
-			case 4: val = *((u32*) d[i].addr); break;
-		}
-		seq_printf(m, "%s=%d\n", d[i].name, val);
-	}
-
-	return 0;
-}
-
-static ssize_t uap_debug_write(struct file *file, const char __user *buffer,
-			       size_t count, loff_t *pos)
-{
-	struct debug_data *d = PDE_DATA(file_inode(file));
-	char *pdata = (char*) kmalloc(count, GFP_KERNEL);
-	char *p, *p0, *p1, *p2;
-	unsigned i;
-	int r;
-
-	if (!pdata || copy_from_user(pdata, buffer, count)) {
-		if (pdata)
-			kfree(pdata);
-		return 0;
-	}
-
-	p0 = pdata;
-	for (i = 0; i < num_of_items; i++) {
-		for (;;) {
-			if (!(p = strstr(p0, d[i].name)))
-				break;
-			if (!(p1 = strchr(p, '\n')))
-				break;
-			p0 = p1++;
-			if (!(p2 = strchr(p, '=')))
-				break;
-			p2++;
-
-			r = string_to_number(p2);
-
-			switch (d[i].size) {
-				case 1: *((u8 *) d[i].addr) = (u8 ) r; break;
-				case 2: *((u16*) d[i].addr) = (u16) r; break;
-				case 4: *((u32*) d[i].addr) = (u32) r; break;
-			}
-			break;
-		}
-	}
-
-	kfree(pdata);
-
-#ifdef DEBUG_LEVEL1
-	printk(KERN_ALERT "drvdbg = 0x%x\n", drvdbg);
-	printk(KERN_ALERT "INFO  (%08lx) %s\n", DBG_INFO,
-	       (drvdbg & DBG_INFO) ? "X" : "");
-	printk(KERN_ALERT "WARN  (%08lx) %s\n", DBG_WARN,
-	       (drvdbg & DBG_WARN) ? "X" : "");
-	printk(KERN_ALERT "ENTRY (%08lx) %s\n", DBG_ENTRY,
-	       (drvdbg & DBG_ENTRY) ? "X" : "");
-	printk(KERN_ALERT "CMD_D (%08lx) %s\n", DBG_CMD_D,
-	       (drvdbg & DBG_CMD_D) ? "X" : "");
-	printk(KERN_ALERT "DAT_D (%08lx) %s\n", DBG_DAT_D,
-	       (drvdbg & DBG_DAT_D) ? "X" : "");
-	printk(KERN_ALERT "CMND  (%08lx) %s\n", DBG_CMND,
-	       (drvdbg & DBG_CMND) ? "X" : "");
-	printk(KERN_ALERT "DATA  (%08lx) %s\n", DBG_DATA,
-	       (drvdbg & DBG_DATA) ? "X" : "");
-	printk(KERN_ALERT "ERROR (%08lx) %s\n", DBG_ERROR,
-	       (drvdbg & DBG_ERROR) ? "X" : "");
-	printk(KERN_ALERT "FATAL (%08lx) %s\n", DBG_FATAL,
-	       (drvdbg & DBG_FATAL) ? "X" : "");
-	printk(KERN_ALERT "MSG   (%08lx) %s\n", DBG_MSG,
-	       (drvdbg & DBG_MSG) ? "X" : "");
-#endif
-
-	return count;
-}
-
-static int uap_debug_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, show_debug, PDE_DATA(inode));
-}
-
-static const struct file_operations debug_fops = {
-	.open = uap_debug_open,
-	.read = seq_read,
-	.write = uap_debug_write,
-	.llseek = seq_lseek,
-	.release = single_release,
-};
-
-
-/********************************************************
-  Global Functions
- ********************************************************/
-/**
- *  @brief create debug proc file
- *
- *  @param priv	   pointer uap_private
- *  @param dev     pointer net_device
- *  @return	   N/A
- */
-void
-uap_debug_entry(uap_private * priv, struct net_device *dev)
-{
-	int i;
-
-	if (priv->proc_entry == NULL)
+	if (!debugfs_module_dir)
 		return;
 
-	for (i = 0; i < num_of_items; i++) {
-		if (items[i].flag & OFFSET_UAP_ADAPTER)
-			items[i].addr = items[i].offset + (u32) priv->adapter;
-		if (items[i].flag & OFFSET_UAP_DEV)
-			items[i].addr = items[i].offset + (u32) & priv->uap_dev;
+	if (priv->debugfs_dir)
+		return;
+
+	if ((priv->debugfs_dir = debugfs_create_dir(netdev_name(priv->uap_dev.netdev), debugfs_module_dir))) {
+		for (i = 0; i < sizeof(debugfs_items) / sizeof(debugfs_items[0]); i++) {
+			char* address = NULL;
+
+			switch (debugfs_items[i].location) {
+				case LOCATION_UAP_DEV: address = (char*) &priv->uap_dev; break;
+				case LOCATION_ADAPTER: address = (char*)  priv->adapter; break;
+				default: BUG();
+			}
+
+			address += debugfs_items[i].offset;
+
+			switch (debugfs_items[i].size) {
+				case 1: debugfs_create_x8 (debugfs_items[i].name, 0600, priv->debugfs_dir, (u8 *) address); break;
+				case 2: debugfs_create_x16(debugfs_items[i].name, 0600, priv->debugfs_dir, (u16*) address); break;
+				case 4: debugfs_create_x32(debugfs_items[i].name, 0600, priv->debugfs_dir, (u32*) address); break;
+				default: BUG();
+			}
+		}
 	}
-
-	proc_create_data("debug", 0640, priv->proc_entry, &debug_fops, items);
 }
 
-/**
- *  @brief remove proc file
- *
- *  @param priv	   pointer uap_private
- *  @return	   N/A
- */
-void
-uap_debug_remove(uap_private * priv)
+void uap_debugfs_remove_dev(uap_private *priv)
 {
-	remove_proc_entry("debug", priv->proc_entry);
+	if (priv->debugfs_dir) {
+		debugfs_remove_recursive(priv->debugfs_dir);
+	}
 }
 
-#endif
+void __init uap_debugfs_init(void)
+{
+	debugfs_module_dir = debugfs_create_dir(KBUILD_MODNAME, NULL);
+}
+
+void __exit uap_debugfs_exit(void)
+{
+	if (debugfs_module_dir)
+		debugfs_remove_recursive(debugfs_module_dir);
+}
+
+#endif /* CONFIG_DEBUG_FS */
