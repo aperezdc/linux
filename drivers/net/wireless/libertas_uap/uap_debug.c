@@ -40,18 +40,19 @@ enum debug_location {
 
 static const struct {
 	const char	   *name;
+	int                 hex;
 	size_t		    size;
 	ptrdiff_t	    offset;
 	enum debug_location location;
 } debugfs_items[] = {
-	{ "cmd_sent",       debugfs_uap_dev_member(cmd_sent)                         },
-	{ "data_sent",      debugfs_uap_dev_member(data_sent)                        },
-	{ "int_count",      debugfs_adapter_member(IntCounter)                       },
-	{ "cmd_pending",    debugfs_adapter_member(cmd_pending)                      },
-	{ "ps_mode",        debugfs_adapter_member(psmode)                           },
-	{ "ps_state",       debugfs_adapter_member(ps_state)                         },
-	{ "cmd_h2c_failed", debugfs_adapter_member(dbg.num_cmd_host_to_card_failure) },
-	{ "tx_h2c_failed",  debugfs_adapter_member(dbg.num_tx_host_to_card_failure)  },
+	{ "cmd_sent",       0, debugfs_uap_dev_member(cmd_sent)                         },
+	{ "data_sent",      0, debugfs_uap_dev_member(data_sent)                        },
+	{ "int_count",      0, debugfs_adapter_member(IntCounter)                       },
+	{ "cmd_pending",    0, debugfs_adapter_member(cmd_pending)                      },
+	{ "ps_mode",        1, debugfs_adapter_member(psmode)                           },
+	{ "ps_state",       1, debugfs_adapter_member(ps_state)                         },
+	{ "cmd_h2c_failed", 0, debugfs_adapter_member(dbg.num_cmd_host_to_card_failure) },
+	{ "tx_h2c_failed",  0, debugfs_adapter_member(dbg.num_tx_host_to_card_failure)  },
 };
 
 
@@ -80,10 +81,16 @@ void uap_debugfs_add_dev(uap_private *priv)
 
 			address += debugfs_items[i].offset;
 
-			switch (debugfs_items[i].size) {
-				case 1: debugfs_create_x8 (debugfs_items[i].name, 0600, priv->debugfs_dir, (u8 *) address); break;
-				case 2: debugfs_create_x16(debugfs_items[i].name, 0600, priv->debugfs_dir, (u16*) address); break;
-				case 4: debugfs_create_x32(debugfs_items[i].name, 0600, priv->debugfs_dir, (u32*) address); break;
+			/* Items to be shown in hex are added +10 */
+			switch (debugfs_items[i].size + (debugfs_items[i].hex * 10)) {
+				case  1: debugfs_create_u8 (debugfs_items[i].name, 0600, priv->debugfs_dir, (u8 *) address); break;
+				case  2: debugfs_create_u16(debugfs_items[i].name, 0600, priv->debugfs_dir, (u16*) address); break;
+				case  4: debugfs_create_u32(debugfs_items[i].name, 0600, priv->debugfs_dir, (u32*) address); break;
+				case  8: debugfs_create_u64(debugfs_items[i].name, 0600, priv->debugfs_dir, (u64*) address); break;
+				case 11: debugfs_create_x8 (debugfs_items[i].name, 0600, priv->debugfs_dir, (u8 *) address); break;
+				case 12: debugfs_create_x16(debugfs_items[i].name, 0600, priv->debugfs_dir, (u16*) address); break;
+				case 14: debugfs_create_x32(debugfs_items[i].name, 0600, priv->debugfs_dir, (u32*) address); break;
+				case 18: debugfs_create_x64(debugfs_items[i].name, 0600, priv->debugfs_dir, (u64*) address); break;
 				default: BUG();
 			}
 		}
