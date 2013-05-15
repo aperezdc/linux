@@ -1561,10 +1561,15 @@ uap_add_card(void *card)
 		printk(KERN_ERR "Cannot register network device!\n");
 		goto err_init_fw;
 	}
+
 #ifdef CONFIG_PROC_FS
 	uap_proc_entry(priv, dev);
-	uap_debug_entry(priv, dev);
-#endif /* CPNFIG_PROC_FS */
+#endif /* CONFIG_PROC_FS */
+
+#ifdef CONFIG_DEBUG_FS
+	uap_debugfs_add_dev(priv);
+#endif /* CONFIG_DEBUG_FS */
+
 	up(&AddRemoveCardSem);
 
 	LEAVE();
@@ -1650,10 +1655,15 @@ uap_remove_card(void *card)
 		sock_release((Adapter->nl_sk)->sk_socket);
 		Adapter->nl_sk = NULL;
 	}
+
+#ifdef CONFIG_DEBUG_FS
+	uap_debugfs_remove_dev(priv);
+#endif /* CONFIG_DEBUG_FS */
+
 #ifdef CONFIG_PROC_FS
-	uap_debug_remove(priv);
 	uap_proc_remove(priv);
-#endif
+#endif /* CONFIG_PROC_FS */
+
 	sbi_unregister_dev(priv);
 	PRINTM(INFO, "Free Adapter\n");
 	uap_free_adapter(priv);
@@ -1679,7 +1689,12 @@ uap_init_module(void)
 	int ret = UAP_STATUS_SUCCESS;
 	ENTER();
 
+#ifdef CONFIG_DEBUG_FS
+	uap_debugfs_init();
+#endif /* CONFIG_DEBUG_FS */
+
 	sema_init(&AddRemoveCardSem, 1);
+
 	ret = sbi_register();
 	LEAVE();
 	return ret;
@@ -1700,8 +1715,14 @@ uap_cleanup_module(void)
 		uap_func_shutdown(uappriv);
 	}
 	up(&AddRemoveCardSem);
+
 exit_sem_err:
 	sbi_unregister();
+
+#ifdef CONFIG_DEBUG_FS
+	uap_debugfs_exit();
+#endif /* CONFIG_DEBUG_FS */
+
 	LEAVE();
 }
 

@@ -392,6 +392,10 @@ struct _uap_private
 	struct proc_dir_entry *proc_entry;
 #endif /* CONFIG_PROC_FS */
 
+#ifdef CONFIG_DEBUG_FS
+    struct dentry *debugfs_dir;
+#endif /* CONFIG_DEBUG_FS */
+
 	/** Firmware helper */
 	const struct firmware *fw_helper;
 	/** Firmware */
@@ -554,9 +558,14 @@ int uap_process_sleep_confirm_resp(uap_private *priv, u8 *resp, int resp_len);
 void uap_proc_entry(uap_private *priv, struct net_device *dev);
 void uap_proc_remove(uap_private *priv);
 int string_to_number(char *s);
-void uap_debug_entry(uap_private *priv, struct net_device *dev);
-void uap_debug_remove(uap_private *priv);
 #endif /* CONFIG_PROC_FS */
+
+#ifdef CONFIG_DEBUG_FS
+void uap_debugfs_init(void);
+void uap_debugfs_exit(void);
+void uap_debugfs_add_dev(uap_private *priv);
+void uap_debugfs_remove_dev(uap_private *priv);
+#endif /* CONFIG_DEBUG_FS */
 
 int sbi_register(void);
 void sbi_unregister(void);
