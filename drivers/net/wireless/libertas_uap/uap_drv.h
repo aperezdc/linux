@@ -35,11 +35,6 @@
 #define	FALSE			0
 #endif
 
-/** Bit definitions */
-#ifndef BIT
-#define BIT(x)	(1UL << (x))
-#endif
-
 /** Debug Macro definition*/
 #ifdef	DEBUG_LEVEL1
 
