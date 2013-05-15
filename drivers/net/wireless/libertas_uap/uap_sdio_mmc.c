@@ -576,19 +576,19 @@ uap_resume(struct sdio_func *func)
 }
 #endif
 
-/** Device ID for SD8688 */
-#define  SD_DEVICE_ID_8688_UAP 0x9103
-/** UAP IDs */
-static const struct sdio_device_id uap_ids[] = {
-	{ SDIO_DEVICE(SDIO_VENDOR_ID_MARVELL, SD_DEVICE_ID_8688_UAP) },
-	{ },
-};
 
-MODULE_DEVICE_TABLE(sdio, uap_ids);
+static const struct sdio_device_id uap_sdio_ids[] = {
+	{ SDIO_DEVICE(SDIO_VENDOR_ID_MARVELL,
+		      SDIO_DEVICE_ID_MARVELL_LIBERTAS) },
+	{ SDIO_DEVICE(SDIO_VENDOR_ID_MARVELL,
+		      SDIO_DEVICE_ID_MARVELL_8688WLAN) },
+	{ /* end: all zeroes */ },
+};
+MODULE_DEVICE_TABLE(sdio, uap_sdio_ids);
 
 static struct sdio_driver uap_sdio = {
 	.name		= "uap_sdio",
-	.id_table	= uap_ids,
+	.id_table	= uap_sdio_ids,
 	.probe		= uap_probe,
 	.remove		= uap_remove,
 #ifdef CONFIG_PM
