@@ -51,6 +51,6 @@
 #include <linux/mmc/sdio_ids.h>
 #include <linux/mmc/sdio_func.h>
 #include <linux/mmc/card.h>
-#include "uap_sdio_mmc.h"
+#include "if_sdio.h"
 
 #endif /* _UAP_HEADERS_H */
