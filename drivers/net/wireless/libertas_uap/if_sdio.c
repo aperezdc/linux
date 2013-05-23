@@ -19,7 +19,7 @@
  *
  */
 
-#include "uap_sdio_mmc.h"
+#include "if_sdio.h"
 
 #include <linux/firmware.h>
 #include <linux/mmc/host.h>
@@ -44,75 +44,6 @@ static u8 sd_ireg = 0;
 
 
 /**
- * @brief This function reads the IO register.
- *
- * @param priv	A pointer to uap_private structure
- * @param reg	register to be read
- * @param data	 pointer to variable that keeps returned value
- * @return	UAP_STATUS_SUCCESS or UAP_STATUS_FAILURE
- */
-static int
-sbi_read_ioreg(uap_private *priv, u32 reg, u8 *dat)
-{
-	struct sdio_mmc_card *card;
-	int ret = UAP_STATUS_FAILURE;
-
-	card = priv->uap_dev.card;
-	if (!card || !card->func) {
-		PRINTM(ERROR, "sbi_read_ioreg(): card or function is NULL!\n");
-		goto done;
-	}
-
-	*dat = sdio_readb(card->func, reg, &ret);
-	if (ret) {
-		PRINTM(ERROR, "sbi_read_ioreg(): sdio_readb failed! ret=%d\n", ret);
-		goto done;
-	}
-
-	PRINTM(INFO, "sbi_read_ioreg() priv=%p func=%d reg=%#x dat=%#x\n", priv,
-	       card->func->num, reg, *dat);
-
-done:
-	return ret;
-}
-
-/**
- * @brief This function writes the IO register.
- *
- * @param priv	A pointer to uap_private structure
- * @param reg	register to be written
- * @param dat	the value to be written
- * @return	UAP_STATUS_SUCCESS or UAP_STATUS_FAILURE
- */
-static int
-sbi_write_ioreg(uap_private *priv, u32 reg, u8 dat)
-{
-	struct sdio_mmc_card *card;
-	int ret = UAP_STATUS_FAILURE;
-
-	ENTER();
-
-	card = priv->uap_dev.card;
-	if (!card || !card->func) {
-		PRINTM(ERROR, "sbi_write_ioreg(): card or function is NULL!\n");
-		goto done;
-	}
-
-	PRINTM(INFO, "sbi_write_ioreg() priv=%p func=%d reg=%#x dat=%#x\n", priv,
-	       card->func->num, reg, dat);
-
-	sdio_writeb(card->func, dat, reg, &ret);
-	if (ret) {
-		PRINTM(ERROR, "sbi_write_ioreg(): sdio_readb failed! ret=%d\n", ret);
-		goto done;
-	}
-
-done:
-	LEAVE();
-	return ret;
-}
-
-/**
  * @brief This function get rx_unit value
  *
  * @param priv	A pointer to uap_private structure
@@ -121,13 +52,14 @@ done:
 static int
 sd_get_rx_unit(uap_private *priv)
 {
+	struct sdio_mmc_card *card = priv->uap_dev.card;
 	int ret = UAP_STATUS_SUCCESS;
 	u8 reg;
 
 	ENTER();
 
-	ret = sbi_read_ioreg(priv, CARD_RX_UNIT_REG, &reg);
-	if (ret == UAP_STATUS_SUCCESS) {
+	reg = sdio_readb(card->func, CARD_RX_UNIT_REG, &ret);
+	if (!ret) {
 		sdio_rx_unit = reg;
 	}
 
@@ -138,17 +70,18 @@ sd_get_rx_unit(uap_private *priv)
 static int
 sd_read_scratch(uap_private *priv, u16 *dat)
 {
+	struct sdio_mmc_card *card = priv->uap_dev.card;
 	int ret;
 	u8 scr0;
 	u8 scr1;
 
 	ENTER();
 
-	ret = sbi_read_ioreg(priv, CARD_FW_STATUS0_REG, &scr0);
-	if (ret < 0)
+    scr0 = sdio_readb(card->func, CARD_FW_STATUS0_REG, &ret);
+	if (ret)
 		return UAP_STATUS_FAILURE;
 
-	ret = sbi_read_ioreg(priv, CARD_FW_STATUS1_REG, &scr1);
+	scr1 = sdio_readb(card->func, CARD_FW_STATUS1_REG, &ret);
 	PRINTM(INFO, "CARD_OCR_0_REG = 0x%x, CARD_OCR_1_REG = 0x%x\n", scr0, scr1);
 	if (ret < 0)
 		return UAP_STATUS_FAILURE;
@@ -168,15 +101,15 @@ sd_read_scratch(uap_private *priv, u16 *dat)
 static int
 sd_read_rx_len(uap_private *priv, u16 *dat)
 {
+	struct sdio_mmc_card *card = priv->uap_dev.card;
 	int ret = UAP_STATUS_SUCCESS;
 	u8 reg;
 
 	ENTER();
 
 	// For sd8686, you read scratch reg instead of len reg.
-	ret = sbi_read_ioreg(priv, CARD_RX_LEN_REG, &reg);
-
-	if (ret == UAP_STATUS_SUCCESS)
+	reg = sdio_readb(card->func, CARD_RX_LEN_REG, &ret);
+	if (!ret)
 		*dat = (u16) reg << sdio_rx_unit;
 
 	LEAVE();
@@ -218,15 +151,18 @@ sd_read_firmware_status(uap_private *priv, u16 *dat)
 static int
 mv_sdio_poll_card_status(uap_private *priv, u8 bits)
 {
+	struct sdio_mmc_card *card = priv->uap_dev.card;
 	int tries;
 	u8 cs;
 
 	ENTER();
 
 	for (tries = 0; tries < MAX_POLL_TRIES; tries++) {
-		if (sbi_read_ioreg(priv, CARD_STATUS_REG, &cs) < 0)
+	    int ret = 0;
+		cs = sdio_readb(card->func, CARD_STATUS_REG, &ret);
+		if (ret)
 			break;
-		else if ((cs & bits) == bits) {
+		if ((cs & bits) == bits) {
 			LEAVE();
 			return UAP_STATUS_SUCCESS;
 		}
@@ -373,13 +309,13 @@ exit:
 static int
 enable_host_int_mask(uap_private *priv, u8 mask)
 {
+    struct sdio_mmc_card *card = priv->uap_dev.card;
 	int ret = UAP_STATUS_SUCCESS;
 
 	ENTER();
 
 	/* Simply write the mask to the register */
-	ret = sbi_write_ioreg(priv, HOST_INT_MASK_REG, mask);
-
+	sdio_writeb(card->func, HOST_INT_MASK_REG, mask, &ret);
 	if (ret) {
 		PRINTM(WARN, "Unable to enable the host interrupt!\n");
 		ret = UAP_STATUS_FAILURE;
@@ -399,13 +335,14 @@ enable_host_int_mask(uap_private *priv, u8 mask)
 static int
 disable_host_int_mask(uap_private *priv, u8 mask)
 {
+	struct sdio_mmc_card *card = priv->uap_dev.card;
 	int ret = UAP_STATUS_SUCCESS;
 	u8 host_int_mask;
 
 	ENTER();
 
 	/* Read back the host_int_mask register */
-	ret = sbi_read_ioreg(priv, HOST_INT_MASK_REG, &host_int_mask);
+	host_int_mask = sdio_readb(card->func, HOST_INT_MASK_REG, &ret);
 	if (ret) {
 		ret = UAP_STATUS_FAILURE;
 		goto done;
@@ -413,8 +350,8 @@ disable_host_int_mask(uap_private *priv, u8 mask)
 
 	/* Update with the mask and write back to the register */
 	host_int_mask &= ~mask;
-	ret = sbi_write_ioreg(priv, HOST_INT_MASK_REG, host_int_mask);
-	if (ret < 0) {
+	sdio_writeb(card->func, HOST_INT_MASK_REG, host_int_mask, &ret);
+	if (ret) {
 		PRINTM(WARN, "Unable to diable the host interrupt!\n");
 		ret = UAP_STATUS_FAILURE;
 		goto done;
@@ -430,8 +367,7 @@ done:
  *
  * @param func	A pointer to sdio_func structure.
  */
-static void
-sbi_interrupt(struct sdio_func *func)
+static void if_sdio_interrupt(struct sdio_func *func)
 {
 	struct sdio_mmc_card *card;
 	uap_private *priv;
@@ -490,8 +426,7 @@ done:
  * @param id	A pointer to structure sd_device_id
  * @return	UAP_STATUS_SUCCESS or UAP_STATUS_FAILURE
  */
-static int
-uap_probe(struct sdio_func *func, const struct sdio_device_id *id)
+static int if_sdio_probe(struct sdio_func *func, const struct sdio_device_id *id)
 {
 	int ret = UAP_STATUS_FAILURE;
 	struct sdio_mmc_card *card = NULL;
@@ -528,8 +463,7 @@ done:
  *
  * @param func	A pointer to sdio_func structure
  */
-static void
-uap_remove(struct sdio_func *func)
+static void if_sdio_remove(struct sdio_func *func)
 {
 	struct sdio_mmc_card *card;
 
@@ -547,54 +481,53 @@ uap_remove(struct sdio_func *func)
 }
 
 #ifdef CONFIG_PM
-/**
- *  @brief This function handles client driver suspend
- *
- *  @param func	A pointer to sdio_func structure
- *  @return	UAP_STATUS_SUCCESS or UAP_STATUS_FAILURE
- */
-int
-uap_suspend(struct sdio_func *func)
+static int if_sdio_suspend(struct device *dev)
 {
-	ENTER();
-	LEAVE();
+	struct sdio_func *func = dev_to_sdio_func(dev);
+	mmc_pm_flag_t flags = sdio_get_host_pm_caps(func);
+
+	dev_info(dev, "%s: suspend: PM flags = 0x%x\n",
+		 sdio_func_id(func), flags);
+
 	return 0;
 }
 
-/**
- * @brief This function handles client driver resume
- *
- * @param func	A pointer to sdio_func structure
- * @return	UAP_STATUS_SUCCESS or UAP_STATUS_FAILURE
- */
-int
-uap_resume(struct sdio_func *func)
+static int if_sdio_resume(struct device *dev)
 {
-	ENTER();
-	LEAVE();
+	struct sdio_func *func = dev_to_sdio_func(dev);
+
+	dev_info(dev, "%s: resume: we're back\n", sdio_func_id(func));
+
 	return 0;
 }
-#endif
+
+static const struct dev_pm_ops if_sdio_pm_ops = {
+	.suspend	= if_sdio_suspend,
+	.resume		= if_sdio_resume,
+};
+#endif /* CONFIG_PM */
 
 
-static const struct sdio_device_id uap_sdio_ids[] = {
+static const struct sdio_device_id if_sdio_ids[] = {
 	{ SDIO_DEVICE(SDIO_VENDOR_ID_MARVELL,
 		      SDIO_DEVICE_ID_MARVELL_LIBERTAS) },
 	{ SDIO_DEVICE(SDIO_VENDOR_ID_MARVELL,
 		      SDIO_DEVICE_ID_MARVELL_8688WLAN) },
 	{ /* end: all zeroes */ },
 };
-MODULE_DEVICE_TABLE(sdio, uap_sdio_ids);
+MODULE_DEVICE_TABLE(sdio, if_sdio_ids);
 
-static struct sdio_driver uap_sdio = {
-	.name		= "uap_sdio",
-	.id_table	= uap_sdio_ids,
-	.probe		= uap_probe,
-	.remove		= uap_remove,
+
+static struct sdio_driver if_sdio_driver = {
+	.name		= "uap8xxx",
+	.id_table	= if_sdio_ids,
+	.probe		= if_sdio_probe,
+	.remove		= if_sdio_remove,
 #ifdef CONFIG_PM
-	/* .suspend	= uap_suspend, */
-	/* .resume	= uap_resume, */
-#endif
+        .drv = {
+                .pm = &if_sdio_pm_ops,
+        },
+#endif /* CONFIG_PM */
 
 };
 
@@ -611,7 +544,7 @@ sbi_register()
 	ENTER();
 
 	/* SDIO Driver Registration */
-	if (sdio_register_driver(&uap_sdio) != 0) {
+	if (sdio_register_driver(&if_sdio_driver) != 0) {
 		PRINTM(FATAL, "SDIO Driver Registration Failed \n");
 		ret = UAP_STATUS_FAILURE;
 	}
@@ -629,7 +562,7 @@ sbi_unregister(void)
 	ENTER();
 
 	/* SDIO Driver Unregistration */
-	sdio_unregister_driver(&uap_sdio);
+	sdio_unregister_driver(&if_sdio_driver);
 
 	LEAVE();
 }
@@ -717,7 +650,7 @@ sbi_claim_irq(uap_private * priv)
 
 	sdio_claim_host(func);
 
-	ret = sdio_claim_irq(func, sbi_interrupt);
+	ret = sdio_claim_irq(func, if_sdio_interrupt);
 	if (ret) {
 		PRINTM(FATAL, "sdio_claim_irq failed: ret=%d\n", ret);
 	}
@@ -819,19 +752,19 @@ sbi_register_dev(uap_private * priv)
 	}
 
 	/* Read the IO port */
-	ret = sbi_read_ioreg(priv, IO_PORT_0_REG, &reg);
+	reg = sdio_readb(func, IO_PORT_0_REG, &ret);
 	if (ret)
 		goto disable_func;
 	else
 		priv->uap_dev.ioport |= reg;
 
-	ret = sbi_read_ioreg(priv, IO_PORT_1_REG, &reg);
+	reg = sdio_readb(func, IO_PORT_1_REG, &ret);
 	if (ret)
 		goto disable_func;
 	else
 		priv->uap_dev.ioport |= (reg << 8);
 
-	ret = sbi_read_ioreg(priv, IO_PORT_2_REG, &reg);
+	reg = sdio_readb(func, IO_PORT_2_REG, &ret);
 	if (ret)
 		goto disable_func;
 	else
@@ -1167,14 +1100,16 @@ sbi_prog_fw_w_helper(uap_private *priv)
 			break;
 
 		for (tries = 0; tries < MAX_POLL_TRIES; tries++) {
-			if ((ret = sbi_read_ioreg(priv, HOST_F1_RD_BASE_0, &base0)) < 0) {
+			base0 = sdio_readb(card->func, HOST_F1_RD_BASE_0, &ret);
+			if (ret) {
 				PRINTM(WARN, "Dev BASE0 register read failed:"
 				       " base0=0x%04X(%d). Terminating download.\n", base0,
 				       base0);
 				ret = UAP_STATUS_FAILURE;
 				goto done;
 			}
-			if ((ret = sbi_read_ioreg(priv, HOST_F1_RD_BASE_1, &base1)) < 0) {
+			base1 = sdio_readb(card->func, HOST_F1_RD_BASE_1, &ret);
+			if (ret) {
 				PRINTM(WARN, "Dev BASE1 register read failed:"
 				       " base1=0x%04X(%d). Terminating download.\n", base1,
 				       base1);
@@ -1236,10 +1171,11 @@ sbi_prog_fw_w_helper(uap_private *priv)
 		ret = sdio_writesb(card->func, priv->uap_dev.ioport,
 				   fwbuf, tx_blocks * SD_BLOCK_SIZE);
 
-		if (ret < 0) {
+		if (ret) {
 			PRINTM(ERROR, "FW download, write iomem (%d) failed @ %d\n", i,
 			       offset);
-			if (sbi_write_ioreg(priv, CONFIGURATION_REG, 0x04) < 0) {
+			sdio_writeb(card->func, CONFIGURATION_REG, 0x04, &ret);
+			if (ret) {
 				PRINTM(ERROR, "write ioreg failed (CFG)\n");
 			}
 		}

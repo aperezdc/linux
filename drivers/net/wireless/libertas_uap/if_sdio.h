@@ -3,6 +3,7 @@
  *  related macros, enum, and structure.
  *
  * Copyright (C) 2007-2009, Marvell International Ltd.
+ * Copyright (C) 2013, Adrian Perez de Castro <aperez@igalia.com>
  *
  * This software file (the "File") is distributed by Marvell International
  * Ltd. under the terms of the GNU General Public License Version 2, June 1991
@@ -23,8 +24,8 @@
   10/10/07: initial version
  ****************************************************/
 
-#ifndef	_UAP_SDIO_MMC_H
-#define	_UAP_SDIO_MMC_H
+#ifndef	_UAP_IF_SDIO_H
+#define	_UAP_IF_SDIO_H
 
 #include <linux/mmc/sdio.h>
 #include <linux/mmc/sdio_ids.h>
@@ -133,4 +134,4 @@ struct sdio_mmc_card
     uap_private *priv;
 };
 
-#endif /* _UAP_SDIO_MMC_H */
+#endif /* _UAP_IF_SDIO_H */
