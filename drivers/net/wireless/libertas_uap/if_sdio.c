@@ -67,29 +67,32 @@ sd_get_rx_unit(uap_private *priv)
 	return ret;
 }
 
-static int
-sd_read_scratch(uap_private *priv, u16 *dat)
+/*
+ *  For SD8686, this function reads firmware status after
+ *  the image is downloaded, or reads RX packet length when
+ *  interrupt (with IF_SDIO_H_INT_UPLD bit set) is received.
+ *  For SD8688, this function reads firmware status only.
+ */
+static u16 if_sdio_read_scratch(uap_private *priv, int *err)
 {
-	struct sdio_mmc_card *card = priv->uap_dev.card;
-	int ret;
-	u8 scr0;
-	u8 scr1;
+    struct sdio_mmc_card *card = priv->uap_dev.card;
+    int ret;
+    u16 scratch;
 
-	ENTER();
+    /*
+     * TODO: Instead of hardcoding CARD_FW_STATUS[01]_REG,
+     * save the base scratch register in priv->cratch_reg.
+     */
+    scratch = sdio_readb(card->func, CARD_FW_STATUS0_REG, &ret);
+    if (!ret)
+        scratch |= sdio_readb(card->func, CARD_FW_STATUS1_REG, &ret) << 8;
 
-    scr0 = sdio_readb(card->func, CARD_FW_STATUS0_REG, &ret);
-	if (ret)
-		return UAP_STATUS_FAILURE;
+    if (err)
+        *err = ret;
 
-	scr1 = sdio_readb(card->func, CARD_FW_STATUS1_REG, &ret);
-	PRINTM(INFO, "CARD_OCR_0_REG = 0x%x, CARD_OCR_1_REG = 0x%x\n", scr0, scr1);
-	if (ret < 0)
-		return UAP_STATUS_FAILURE;
-
-	*dat = (((u16) scr1) << 8) | scr0;
-
-	return UAP_STATUS_SUCCESS;
+    return ret ? 0xffff : scratch;
 }
+
 
 /**
  * @brief This function reads rx length
@@ -116,30 +119,6 @@ sd_read_rx_len(uap_private *priv, u16 *dat)
 	return ret;
 }
 
-
-/**
- * @brief This function reads fw status registers
- *
- * @param priv	A pointer to uap_private structure
- * @param dat	A pointer to keep returned data
- * @return	UAP_STATUS_SUCCESS or UAP_STATUS_FAILURE
- */
-static int
-sd_read_firmware_status(uap_private *priv, u16 *dat)
-{
-	int ret = UAP_STATUS_SUCCESS;
-	u16 x;
-
-	ret = sd_read_scratch(priv, &x);
-	if (ret < 0) {
-		LEAVE();
-		return UAP_STATUS_FAILURE;
-	}
-
-	*dat = x;
-
-	return UAP_STATUS_SUCCESS;
-}
 
 /**
  * @brief This function polls the card status register.
@@ -1227,9 +1206,9 @@ sbi_check_fw_status(uap_private *priv, int pollnum)
 
 	/* Wait for firmware initialization event */
 	for (tries = 0; tries < pollnum; tries++) {
-		if ((ret = sd_read_firmware_status(priv, &firmwarestat)) < 0)
+		firmwarestat = if_sdio_read_scratch(priv, &ret);
+		if (ret)
 			continue;
-
 		if (firmwarestat == FIRMWARE_READY) {
 			ret = UAP_STATUS_SUCCESS;
 			break;
@@ -1239,11 +1218,10 @@ sbi_check_fw_status(uap_private *priv, int pollnum)
 		}
 	}
 
-	if (ret < 0)
+	if (ret)
 		goto done;
 
 	ret = UAP_STATUS_SUCCESS;
-
 	sd_get_rx_unit(priv);
 
 done:
