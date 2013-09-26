@@ -1412,8 +1412,8 @@ uap_process_event(uap_private *priv, u8 *payload, uint len)
 
 		/* From Kernel */
 		NETLINK_CREDS(skb)->pid = 0;
-		NETLINK_CREDS(skb)->uid = 0;
-		NETLINK_CREDS(skb)->gid = 0;
+		NETLINK_CREDS(skb)->uid = make_kuid(&init_user_ns, 0);
+		NETLINK_CREDS(skb)->gid = make_kgid(&init_user_ns, 0);
 
 		/* Multicast group number */
 		NETLINK_CB(skb).dst_group = NL_MULTICAST_GROUP;
